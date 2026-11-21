@@ -210,10 +210,7 @@ export const LandingSplit: React.FC<LandingSplitProps> = ({ activeView, onOpenVi
       } else if (Math.abs(progressRef.current - 0.5) < 0.004) {
         setProgress(0.5);
       } else {
-        lockRef.current = true;
-        tweenProgress(0.5, 480, easeOutBack, () => {
-          lockRef.current = false;
-        });
+        tweenProgress(0.5, 320, easeOutBack);
       }
     };
 
@@ -307,8 +304,9 @@ export const LandingSplit: React.FC<LandingSplitProps> = ({ activeView, onOpenVi
         aria-label="Open Creative Portfolio: AI Creative Artist"
         onClick={(ev) => handleHalfClick(ev, 'cre')}
       >
-        {/* Subtle studio vertical grid + prismatic caustic light field */}
+        {/* Subtle studio vertical grid + fluted optical glass refraction + caustics */}
         <div className="cre-liquid-backdrop" aria-hidden="true" />
+        <div className="cre-fluted-overlay" aria-hidden="true" />
         <div className="cre-caustic-orb is-sapphire" aria-hidden="true" />
         <div className="cre-caustic-orb is-coral" aria-hidden="true" />
 
@@ -335,12 +333,12 @@ export const LandingSplit: React.FC<LandingSplitProps> = ({ activeView, onOpenVi
 
         <div className="half-inner">
           <div className="cre-liquid-card">
-            <span className="half-kicker text-[#bfdbfe]">
+            <span className="half-kicker text-[#dbeafe]">
               <span className="split-mobile-only">↓ Swipe down</span>
               <span className="split-desktop-only">Drag right →</span> · Creative
             </span>
             <h2 className="half-title">
-              AI Creative <em>Artist</em>
+              AI Creative <em className="cre-artist-glass-pill">Artist</em>
             </h2>
             <p className="half-desc">
               Ideas into visuals. Imagination into motion.

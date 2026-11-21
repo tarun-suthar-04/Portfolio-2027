@@ -45,6 +45,7 @@ body,
   height: 100dvh;
   opacity: 0;
   visibility: hidden;
+  pointer-events: none;
   transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s 0.45s;
 }
 
@@ -60,6 +61,7 @@ body[data-v='tech'] #tech,
 body[data-v='cre'] #cre {
   opacity: 1;
   visibility: visible;
+  pointer-events: auto;
   transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s;
 }
 
@@ -97,23 +99,19 @@ body[data-v='cre'] #cre {
   padding: calc(14px + var(--sa)) 16px calc(16px + var(--sb));
 }
 
-/* Creative Half — Liquid Glass Studio UI */
+/* Creative Half — Liquid Glass Optical Studio */
 .half-panel.c {
-  --cx: 36%;
-  --cy: 34%;
-  --px: 0px;
-  --py: 0px;
   left: 0;
   top: 0;
   right: 0;
   height: calc((1 - var(--p)) * 100%);
-  background-color: #050814;
+  background-color: #03091a;
   background-image:
-    radial-gradient(62% 72% at 24% 22%, rgba(37, 99, 235, 0.58), transparent 64%),
-    radial-gradient(56% 64% at 80% 18%, rgba(56, 189, 248, 0.28), transparent 62%),
-    radial-gradient(55% 65% at 14% 88%, rgba(168, 85, 247, 0.26), transparent 66%),
-    radial-gradient(48% 58% at 72% 84%, rgba(52, 211, 153, 0.16), transparent 64%);
-  color: #eaf2ff;
+    radial-gradient(70% 78% at 16% 18%, rgba(37, 99, 235, 0.72), transparent 64%),
+    radial-gradient(56% 64% at 84% 22%, rgba(56, 189, 248, 0.34), transparent 62%),
+    radial-gradient(56% 66% at 18% 86%, rgba(251, 146, 60, 0.34), transparent 62%),
+    radial-gradient(52% 60% at 72% 80%, rgba(99, 102, 241, 0.28), transparent 64%);
+  color: #f8fbff;
 }
 
 .half-panel.c .half-inner {
@@ -125,191 +123,181 @@ body[data-v='cre'] #cre {
   z-index: 3;
 }
 
-/* Studio vertical hairlines inspired by reference cards */
-.cre-studio-lines {
+.cre-liquid-backdrop {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background-image: linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
-  background-size: 64px 100%;
+  background-image:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 64px 64px;
 }
 
-/* Liquid ambient cursor glow behind glass */
-.cre-liquid-aurora {
+.cre-fluted-overlay {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(
-    400px circle at var(--cx) var(--cy),
-    rgba(96, 165, 250, 0.44) 0%,
-    rgba(192, 132, 252, 0.18) 38%,
-    rgba(52, 211, 153, 0.12) 56%,
-    transparent 76%
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.038) 0px,
+    rgba(255, 255, 255, 0.01) 14px,
+    rgba(2, 6, 23, 0.14) 28px,
+    rgba(255, 255, 255, 0.045) 29px
   );
-  transition: opacity 0.25s ease;
+  mask-image: radial-gradient(ellipse 92% 90% at 28% 52%, #000 35%, transparent 98%);
+  -webkit-mask-image: radial-gradient(ellipse 92% 90% at 28% 52%, #000 35%, transparent 98%);
 }
 
-/* Stacked Liquid Glass Capsules (Reference 1 & 2) */
-.cre-liquid-stack {
+.cre-caustic-orb {
+  position: absolute;
+  border-radius: 999px;
+  pointer-events: none;
+  filter: blur(22px);
+}
+
+.cre-caustic-orb.is-sapphire {
+  top: 4%;
+  left: 5%;
+  width: 260px;
+  height: 260px;
+  background: radial-gradient(
+    circle,
+    rgba(224, 242, 254, 0.65) 0%,
+    rgba(59, 130, 246, 0.44) 44%,
+    transparent 74%
+  );
+}
+
+.cre-caustic-orb.is-coral {
+  bottom: 8%;
+  left: 16%;
+  width: 240px;
+  height: 240px;
+  background: radial-gradient(
+    circle,
+    rgba(253, 186, 116, 0.48) 0%,
+    rgba(244, 63, 94, 0.34) 44%,
+    transparent 74%
+  );
+}
+
+/* Stepped frosted cubic corner tiles (desktop) */
+.cre-liquid-cubes {
+  display: none;
   position: absolute;
   top: 34px;
-  left: 40px;
-  width: 248px;
-  flex-direction: column;
-  pointer-events: none;
-  z-index: 2;
-  transform: translate3d(calc(var(--px) * 0.45), calc(var(--py) * 0.45), 0);
-  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.cre-liquid-capsule {
-  height: 58px;
-  width: 100%;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.36);
-  background: linear-gradient(
-    102deg,
-    rgba(255, 255, 255, 0.36) 0%,
-    rgba(147, 197, 253, 0.2) 28%,
-    rgba(37, 99, 235, 0.12) 58%,
-    rgba(12, 18, 42, 0.35) 78%,
-    rgba(96, 165, 250, 0.3) 100%
-  );
-  box-shadow:
-    inset 0 1.5px 1.5px rgba(255, 255, 255, 0.85),
-    inset 0 -1.5px 3px rgba(96, 165, 250, 0.65),
-    inset 18px 0 28px -10px rgba(255, 255, 255, 0.45),
-    inset -12px 0 22px -10px rgba(56, 189, 248, 0.45),
-    0 12px 28px rgba(3, 7, 24, 0.55);
-  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.cre-liquid-capsule + .cre-liquid-capsule {
-  margin-top: -15px;
-}
-
-.half-panel.c:hover .cre-liquid-capsule:nth-child(1) {
-  transform: translate3d(-4px, -3px, 0);
-}
-.half-panel.c:hover .cre-liquid-capsule:nth-child(2) {
-  transform: translate3d(4px, -1px, 0);
-}
-.half-panel.c:hover .cre-liquid-capsule:nth-child(3) {
-  transform: translate3d(-2px, 2px, 0);
-}
-.half-panel.c:hover .cre-liquid-capsule:nth-child(4) {
-  transform: translate3d(5px, 4px, 0);
-}
-
-/* Stepped Cubic Glass Cascade (Reference 4, 5, 6) */
-.cre-cubic-cascade {
-  position: absolute;
-  top: 46px;
-  left: 256px;
-  width: 158px;
-  gap: 3px;
+  left: 204px;
+  width: 148px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
   z-index: 1;
-  transform: translate3d(calc(var(--px) * -0.35), calc(var(--py) * -0.35), 0);
-  transition: transform 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+  mask-image: linear-gradient(125deg, #000 30%, transparent 98%);
+  -webkit-mask-image: linear-gradient(125deg, #000 30%, transparent 98%);
 }
 
-.cre-cubic-cell {
+.cre-liquid-cube {
   aspect-ratio: 1;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
   background: linear-gradient(
     145deg,
     rgba(255, 255, 255, 0.24) 0%,
-    rgba(192, 132, 252, 0.1) 52%,
-    rgba(56, 189, 248, 0.14) 100%
+    rgba(147, 197, 253, 0.12) 55%,
+    rgba(15, 23, 42, 0.34) 100%
   );
   box-shadow:
-    inset 1.5px 1.5px 4px rgba(255, 255, 255, 0.42),
-    inset -2px -2px 4px rgba(2, 6, 23, 0.42);
-  transition:
-    transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
-    background 0.22s ease,
-    border-color 0.22s ease;
+    inset 1.5px 1.5px 4px rgba(255, 255, 255, 0.48),
+    inset -2px -2px 4px rgba(2, 6, 23, 0.34);
 }
 
-.cre-cubic-cell:hover {
-  transform: scale(1.1);
-  border-color: rgba(255, 255, 255, 0.72);
+.cre-liquid-cube.is-lit {
+  border-color: rgba(219, 234, 254, 0.68);
   background: linear-gradient(
     145deg,
-    rgba(255, 255, 255, 0.48) 0%,
-    rgba(147, 197, 253, 0.28) 100%
+    rgba(219, 234, 254, 0.38) 0%,
+    rgba(59, 130, 246, 0.28) 60%,
+    rgba(15, 23, 42, 0.38) 100%
   );
+  box-shadow:
+    inset 0 0 14px rgba(147, 197, 253, 0.52),
+    inset 1.5px 1.5px 3px rgba(255, 255, 255, 0.72),
+    0 6px 18px rgba(37, 99, 235, 0.3);
 }
 
-/* Primary Liquid Glass Lockup Panel */
-.cre-liquid-panel {
+/* Stacked Liquid Glass stadium capsules (desktop top-left sculpture) */
+.cre-liquid-stack {
+  display: none;
+  position: absolute;
+  top: 28px;
+  left: 36px;
+  width: 214px;
+  flex-direction: column;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.cre-liquid-lens {
+  height: 52px;
+  width: 100%;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.56);
+  background: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0.54) 0%,
+    rgba(219, 234, 254, 0.28) 26%,
+    rgba(37, 99, 235, 0.14) 52%,
+    rgba(6, 12, 32, 0.48) 76%,
+    rgba(125, 211, 252, 0.36) 100%
+  );
+  box-shadow:
+    inset 0 1.5px 1.5px rgba(255, 255, 255, 0.94),
+    inset 0 -1.5px 3px rgba(125, 211, 252, 0.72),
+    inset 20px 0 30px -10px rgba(255, 255, 255, 0.56),
+    inset -12px 0 22px -10px rgba(56, 189, 248, 0.48),
+    0 12px 26px rgba(2, 6, 23, 0.54);
+}
+
+.cre-liquid-lens + .cre-liquid-lens {
+  margin-top: -14px;
+}
+
+/* Primary Liquid Glass Hero Card */
+.cre-liquid-card {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 18px 20px;
+  gap: 8px;
+  padding: 16px 18px;
   border-radius: 28px;
   background: linear-gradient(
     132deg,
-    rgba(255, 255, 255, 0.19) 0%,
-    rgba(147, 197, 253, 0.08) 52%,
-    rgba(255, 255, 255, 0.11) 100%
+    rgba(255, 255, 255, 0.2) 0%,
+    rgba(186, 230, 253, 0.1) 42%,
+    rgba(253, 186, 116, 0.1) 74%,
+    rgba(255, 255, 255, 0.14) 100%
   );
-  backdrop-filter: blur(18px) saturate(160%);
-  -webkit-backdrop-filter: blur(18px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.34);
+  backdrop-filter: blur(22px) saturate(175%);
+  -webkit-backdrop-filter: blur(22px) saturate(175%);
+  border: 1px solid rgba(255, 255, 255, 0.48);
   box-shadow:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.65),
-    inset 0 -1px 0 rgba(147, 197, 253, 0.35),
-    0 22px 46px rgba(2, 6, 23, 0.54);
+    inset 0 1.5px 1px rgba(255, 255, 255, 0.84),
+    inset 0 -1.5px 2px rgba(147, 197, 253, 0.46),
+    inset 20px 0 34px -18px rgba(255, 255, 255, 0.34),
+    inset -14px 0 28px -18px rgba(253, 186, 116, 0.22),
+    0 24px 48px rgba(2, 6, 23, 0.54);
   overflow: hidden;
-  transition:
-    transform 0.26s cubic-bezier(0.16, 1, 0.3, 1),
-    border-color 0.26s ease,
-    box-shadow 0.26s ease;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
-.cre-liquid-panel::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(
-    280px circle at var(--cx) var(--cy),
-    rgba(255, 255, 255, 0.28),
-    rgba(96, 165, 250, 0.08) 42%,
-    transparent 72%
-  );
-}
-
-.half-panel.c:hover .cre-liquid-panel,
-.half-panel.c:focus-visible .cre-liquid-panel {
-  transform: translateY(-3px);
-  border-color: rgba(255, 255, 255, 0.56);
+.half-panel.c:hover .cre-liquid-card {
+  border-color: rgba(255, 255, 255, 0.72);
   box-shadow:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.85),
-    inset 0 -1px 0 rgba(96, 165, 250, 0.55),
-    0 28px 58px rgba(4, 15, 52, 0.68);
-}
-
-.half-panel.c:active .cre-liquid-panel {
-  transform: translateY(0) scale(0.99);
-}
-
-.cre-glass-pill-kicker {
-  display: inline-flex;
-  align-items: center;
-  align-self: flex-start;
-  padding: 4px 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.32);
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
-  font: 600 10.5px var(--mono);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #e0f2fe;
+    inset 0 1.5px 1px rgba(255, 255, 255, 0.94),
+    inset 0 -1.5px 2px rgba(186, 230, 253, 0.62),
+    inset 22px 0 36px -16px rgba(255, 255, 255, 0.42),
+    inset -14px 0 28px -16px rgba(253, 186, 116, 0.28),
+    0 28px 54px rgba(2, 6, 23, 0.62);
 }
 
 /* Technical Half — Full-Bleed Drifting ASCII Field + Vignette Behind */
@@ -319,6 +307,8 @@ body[data-v='cre'] #cre {
   bottom: 0;
   height: calc(var(--p) * 100%);
   background-color: var(--paper);
+  background-image: linear-gradient(rgba(17, 17, 17, 0.045) 1px, transparent 1px);
+  background-size: 100% 40px;
   color: var(--ink);
 }
 
@@ -328,10 +318,22 @@ body[data-v='cre'] #cre {
   pointer-events: none;
   z-index: 0;
   background: radial-gradient(
-    ellipse at 50% 50%,
-    rgba(244, 244, 241, 0) 42%,
-    rgba(17, 17, 17, 0.095) 100%
+    ellipse 76% 78% at 50% 50%,
+    rgba(244, 244, 241, 0) 36%,
+    rgba(17, 17, 17, 0.08) 76%,
+    rgba(17, 17, 17, 0.24) 100%
   );
+}
+
+.tech-margin-rule {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 22px;
+  width: 1px;
+  background: rgba(200, 30, 30, 0.2);
+  pointer-events: none;
+  z-index: 0;
 }
 
 .tech-ascii-canvas {
@@ -352,31 +354,28 @@ body[data-v='cre'] #cre {
   z-index: 2;
 }
 
-.tech-brutal-panel {
+.tech-poster-card {
   position: relative;
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 16px 18px;
-  background: rgba(249, 250, 249, 0.94);
+  background: rgba(249, 250, 249, 0.92);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   border: 1.5px solid #111111;
-  box-shadow: 5px 5px 0 #111111;
-  transition:
-    transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1),
-    background-color 0.22s ease;
+  box-shadow: 6px 6px 0 #111111;
+  overflow: hidden;
 }
 
-.half-panel.t:hover .tech-brutal-panel,
-.half-panel.t:focus-visible .tech-brutal-panel {
-  transform: translate(-2px, -2px);
-  background: #ffffff;
-  box-shadow: 7px 7px 0 var(--y);
-}
-
-.half-panel.t:active .tech-brutal-panel {
-  transform: translate(2px, 2px);
-  box-shadow: 2px 2px 0 #111111;
+.tech-poster-top-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--y);
+  border-bottom: 1px solid #111111;
 }
 
 .half-kicker {
@@ -386,24 +385,43 @@ body[data-v='cre'] #cre {
 }
 
 .half-panel h2.half-title {
-  font: 700 clamp(24px, 3.8vw, 38px) / 1.04 var(--sans);
-  letter-spacing: -0.035em;
+  font: 700 clamp(22px, 3.8vw, 35px) / 1.03 var(--sans);
+  letter-spacing: -0.03em;
+  word-spacing: 0.05em;
   margin: 0;
 }
 
 .half-panel.c h2.half-title {
   color: #ffffff;
+  line-height: 1.12;
 }
 
-.half-panel.c h2.half-title em {
-  font: italic 400 1.24em var(--serif);
-  letter-spacing: 0;
-  color: #93c5fd;
+.half-panel.c h2.half-title em.cre-artist-glass-pill {
+  display: inline-flex;
+  align-items: center;
+  font: italic 400 1.18em / 0.94 var(--serif);
+  letter-spacing: 0.01em;
+  margin-left: 0.12em;
+  padding: 2px 14px 4px;
+  border-radius: 999px;
+  color: #ffffff;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.26) 0%,
+    rgba(147, 197, 253, 0.16) 55%,
+    rgba(255, 255, 255, 0.12) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.54);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.85),
+    inset 0 -1px 2px rgba(96, 165, 250, 0.55),
+    0 4px 16px rgba(59, 130, 246, 0.28);
+  vertical-align: baseline;
 }
 
 .half-panel p.half-desc {
   font: 500 13px / 1.45 var(--mono);
-  opacity: 0.8;
+  opacity: 0.85;
   max-width: 380px;
   text-wrap: balance;
   margin: 0;
@@ -411,15 +429,8 @@ body[data-v='cre'] #cre {
 
 .half-panel.c p.half-desc {
   font-family: var(--sans);
-  font-weight: 500;
-  font-size: 14px;
-  color: #ffffff;
+  color: rgba(240, 246, 255, 0.94);
   opacity: 1;
-}
-
-.half-panel.c p.half-desc span {
-  color: rgba(191, 219, 254, 0.78);
-  font-weight: 400;
 }
 
 .split-desktop-only {
@@ -435,7 +446,7 @@ body[data-v='cre'] #cre {
   text-align: center;
   color: #ffffff;
   mix-blend-mode: difference;
-  font: 800 clamp(56px, 16vw, 150px) / 0.88 var(--sans);
+  font: 800 clamp(44px, min(14.5vw, 12.5dvh), 108px) / 0.88 var(--sans);
   letter-spacing: -0.06em;
   pointer-events: none;
   z-index: 3;
@@ -446,7 +457,7 @@ body[data-v='cre'] #cre {
   position: absolute;
   z-index: 6;
   left: 50%;
-  top: calc(50% + clamp(72px, 14vw, 152px));
+  top: calc(50% + clamp(54px, min(12vw, 11.5dvh), 108px));
   transform: translateX(-50%);
   font: 700 10px var(--mono);
   letter-spacing: 0.14em;
@@ -461,33 +472,90 @@ body[data-v='cre'] #cre {
 
 .split-handle {
   position: absolute;
-  z-index: 5;
-  background: var(--y);
+  z-index: 7;
+  background: rgba(255, 196, 0, 0.94);
   left: 0;
   right: 0;
   top: calc((1 - var(--p)) * 100%);
-  height: 3px;
-  margin-top: -1.5px;
-  box-shadow: 0 0 0 1px #111111;
-  pointer-events: none;
+  height: 1px;
+  margin-top: -0.5px;
+  box-shadow: 0 0 8px rgba(255, 196, 0, 0.24);
+  pointer-events: auto;
+  cursor: ns-resize;
+  touch-action: none;
+}
+
+.split-handle::before {
+  content: '';
+  position: absolute;
+  inset: -20px 0;
 }
 
 .split-handle-knob {
   position: absolute;
-  right: 16px;
+  right: 14px;
   top: 50%;
   transform: translateY(-50%);
-  width: 46px;
-  height: 46px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: var(--y);
-  border: 2px solid #111111;
-  box-shadow: 3px 3px 0 #111111;
+  border: 1.5px solid #111111;
+  box-shadow: 2px 2px 0 #111111;
   display: grid;
   place-items: center;
-  font: 700 17px var(--mono);
+  font: 700 16px var(--mono);
   color: #111111;
-  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto;
+  cursor: inherit;
+}
+
+@media (max-width: 380px) {
+  .half-panel .half-inner {
+    padding: calc(10px + var(--sa)) 12px calc(12px + var(--sb));
+  }
+  .cre-liquid-card,
+  .tech-poster-card {
+    padding: 12px 14px;
+    gap: 6px;
+  }
+  .half-kicker {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+  }
+  .split-handle-knob {
+    right: 10px;
+    width: 38px;
+    height: 38px;
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 800px) and (max-height: 500px) {
+  .half-panel .half-inner {
+    padding: 8px 12px;
+  }
+  .cre-liquid-card {
+    padding: 10px 14px;
+    gap: 4px;
+    border-radius: 18px;
+  }
+  .tech-poster-card {
+    padding: 10px 14px;
+    gap: 4px;
+  }
+  .half-panel h2.half-title {
+    font-size: clamp(18px, 4.2vw, 24px);
+  }
+  .half-panel p.half-desc {
+    display: none;
+  }
+  .split-name {
+    font-size: clamp(32px, min(11vw, 11dvh), 50px);
+  }
+  .split-badge {
+    display: none;
+  }
 }
 
 @media (min-width: 801px) {
@@ -496,6 +564,18 @@ body[data-v='cre'] #cre {
   }
   .split-desktop-only {
     display: inline;
+  }
+  .cre-liquid-stack {
+    display: flex;
+  }
+  .cre-liquid-cubes {
+    display: grid;
+  }
+  .split-name {
+    font: 800 clamp(56px, min(11.5vw, 17dvh), 148px) / 0.88 var(--sans);
+  }
+  .split-badge {
+    top: calc(50% + clamp(68px, min(10.5vw, 15.8dvh), 152px));
   }
   .half-panel.c {
     right: auto;
@@ -508,9 +588,9 @@ body[data-v='cre'] #cre {
     bottom: 0;
     height: auto;
     width: auto;
-    max-width: min(45vw, 456px);
+    max-width: min(42vw, 430px);
     justify-content: flex-end;
-    padding: 36px 40px;
+    padding: 32px 36px;
   }
   .half-panel.t {
     left: auto;
@@ -523,45 +603,98 @@ body[data-v='cre'] #cre {
     top: 0;
     height: auto;
     width: auto;
-    max-width: min(44vw, 440px);
+    max-width: min(42vw, 430px);
     text-align: right;
     align-items: flex-end;
-    padding: 36px 40px;
+    padding: 32px 36px;
   }
-  .tech-brutal-panel {
-    align-items: flex-end;
-    text-align: right;
+  .cre-liquid-card {
     padding: 22px 24px;
   }
-  .cre-liquid-panel {
-    padding: 24px 26px;
+  .tech-poster-card {
+    align-items: flex-end;
+    text-align: right;
+    padding: 24px 24px 20px;
   }
   .split-handle {
     top: 0;
     bottom: 0;
     left: calc((1 - var(--p)) * 100%);
     right: auto;
-    width: 3px;
+    width: 1px;
     height: auto;
-    margin: 0 0 0 -1.5px;
+    margin: 0 0 0 -0.5px;
     pointer-events: auto;
     cursor: ew-resize;
     touch-action: none;
   }
   .split-handle::before {
-    content: '';
-    position: absolute;
-    inset: 0 -18px;
-  }
-  .split-handle:hover .split-handle-knob {
-    transform: translate(-50%, -50%) scale(1.08);
+    inset: 0 -20px;
   }
   .split-handle-knob {
     right: auto;
     top: 82%;
     left: 50%;
+    width: 40px;
+    height: 40px;
     transform: translate(-50%, -50%);
-    pointer-events: none;
+    pointer-events: auto;
+  }
+}
+
+@media (min-width: 801px) and (max-width: 1120px) {
+  .cre-liquid-cubes {
+    display: none;
+  }
+  .cre-liquid-stack {
+    width: 164px;
+    top: 24px;
+    left: 26px;
+  }
+  .cre-liquid-lens {
+    height: 42px;
+  }
+  .half-panel.c .half-inner,
+  .half-panel.t .half-inner {
+    max-width: min(38vw, 370px);
+    padding: 24px 26px;
+  }
+  .cre-liquid-card {
+    padding: 18px 20px;
+  }
+  .tech-poster-card {
+    padding: 20px 20px 18px;
+  }
+}
+
+@media (min-width: 801px) and (max-height: 680px) {
+  .cre-liquid-cubes {
+    display: none;
+  }
+  .cre-liquid-stack {
+    width: 156px;
+    top: 20px;
+    left: 26px;
+  }
+  .cre-liquid-lens {
+    height: 38px;
+  }
+  .half-panel.c .half-inner,
+  .half-panel.t .half-inner {
+    padding: 20px 26px;
+  }
+  .split-handle-knob {
+    top: 85%;
+  }
+}
+
+@media (min-width: 801px) and (max-height: 540px) {
+  .cre-liquid-stack {
+    display: none;
+  }
+  .half-panel.c .half-inner,
+  .half-panel.t .half-inner {
+    padding: 14px 20px;
   }
 }
 
@@ -941,13 +1074,7 @@ body[data-v='cre'] #cre {
   .half-panel,
   .cre-rv,
   .sleek-glass-card,
-  .cubic-pillow,
-  .cre-liquid-panel,
-  .cre-liquid-stack,
-  .cre-liquid-capsule,
-  .cre-cubic-cascade,
-  .cre-cubic-cell,
-  .tech-brutal-panel {
+  .cubic-pillow {
     transition: none !important;
     opacity: 1 !important;
     transform: none !important;

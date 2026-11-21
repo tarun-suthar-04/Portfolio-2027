@@ -62,14 +62,14 @@ export const TechnicalAsciiCanvas: React.FC<TechnicalAsciiCanvasProps> = ({ isAc
           pointerY,
         });
 
-        const weight = state.influence > 0.32 ? 700 : 500;
+        const weight = state.influence > 0.3 ? 700 : 500;
         ctx.font = `${weight} ${state.fontSize.toFixed(1)}px "JetBrains Mono", ui-monospace, monospace`;
 
         if (state.influence > 0.08) {
-          // Blend dark ink toward deep emerald highlight as digits swell near cursor
-          const r = Math.round(17 + state.influence * (15 - 17));
-          const g = Math.round(17 + state.influence * (92 - 17));
-          const b = Math.round(17 + state.influence * (63 - 17));
+          // Swell & brighten: shift dark ink into crisp vivid MDR emerald near pointer
+          const r = Math.round(17 + state.influence * (8 - 17));
+          const g = Math.round(17 + state.influence * (122 - 17));
+          const b = Math.round(17 + state.influence * (82 - 17));
           ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${state.alpha.toFixed(3)})`;
         } else {
           ctx.fillStyle = `rgba(17, 17, 17, ${state.alpha.toFixed(3)})`;
