@@ -1,24 +1,34 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Check, Copy, Layers } from 'lucide-react';
-import {
-  CERTIFICATIONS,
-  EDUCATION,
-  LEARNING_GOALS,
-  PORTFOLIO_PROFILE,
-  PROJECTS,
-  ProjectItem,
-  SKILL_GROUPS,
-  SkillTierId,
-} from '../data/portfolio';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowDown, ArrowUpRight, Check, Copy, FileCode2, FolderOpen, Package, Terminal } from 'lucide-react';
+import { PORTFOLIO_PROFILE, ProjectFileExt, ProjectItem, PROJECTS } from '../data/portfolio';
 import { calculatePullProgress, SPLIT_CONFIG, ViewMode } from '../lib/splitPhysics';
-import { ProjectModal } from './ProjectModal';
+import {
+  filterProjectsByFileType,
+  getProjectFileCounts,
+  ProjectFileFilter,
+} from '../lib/techPortfolio';
+import { ProjectFileCard } from './ProjectFileCard';
+import { ProjectModal, ProjectModalTab } from './ProjectModal';
 import { ResumeModal } from './ResumeModal';
+import { TechStackMarquee } from './TechStackMarquee';
 
 interface TechnicalViewProps {
   activeView: ViewMode;
   onReturnLanding: () => void;
   onSwitchCreative: () => void;
 }
+
+const DirectoryRowIcon: React.FC<{ ext: ProjectFileExt }> = ({ ext }) => {
+  switch (ext) {
+    case '.apk':
+      return <Package className="w-4 h-4 text-[#0f5c3f] shrink-0" aria-hidden="true" />;
+    case '.jar':
+      return <Terminal className="w-4 h-4 text-[#111111] shrink-0" aria-hidden="true" />;
+    case '.py':
+    default:
+      return <FileCode2 className="w-4 h-4 text-[#2563eb] shrink-0" aria-hidden="true" />;
+  }
+};
 
 export const TechnicalView: React.FC<TechnicalViewProps> = ({
   activeView,
@@ -30,10 +40,19 @@ export const TechnicalView: React.FC<TechnicalViewProps> = ({
   const touchYRef = useRef<number>(0);
 
   const [pullProgress, setPullProgress] = useState(0);
-  const [skillFilter, setSkillFilter] = useState<'all' | SkillTierId>('all');
-  const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(null);
+  const [fileFilter, setFileFilter] = useState<ProjectFileFilter>('all');
+  const [modalState, setModalState] = useState<{
+    project: ProjectItem | null;
+    tab: ProjectModalTab;
+  }>({ project: null, tab: 'preview' });
   const [resumeOpen, setResumeOpen] = useState(false);
   const [copiedEmail, setCopiedEmail] = useState(false);
+
+  const fileCounts = useMemo(() => getProjectFileCounts(PROJECTS), []);
+  const visibleProjects = useMemo(
+    () => filterProjectsByFileType(PROJECTS, fileFilter),
+    [fileFilter]
+  );
 
   // Reset scroll to top on entry
   useEffect(() => {
@@ -54,7 +73,7 @@ export const TechnicalView: React.FC<TechnicalViewProps> = ({
     const atBottom = () => el.scrollTop + el.clientHeight >= el.scrollHeight - 2;
 
     const pushDelta = (dy: number, threshold: number) => {
-      if (selectedProject || resumeOpen) return;
+      if (modalState.project || resumeOpen) return;
       if (atBottom() && dy > 0) {
         accRef.current += dy;
         setPullProgress(calculatePullProgress(accRef.current, threshold));
@@ -86,7 +105,7 @@ export const TechnicalView: React.FC<TechnicalViewProps> = ({
     };
 
     const onKeyDown = (ev: KeyboardEvent) => {
-      if (ev.key === 'Escape' && !selectedProject && !resumeOpen) {
+      if (ev.key === 'Escape' && !modalState.project && !resumeOpen) {
         onReturnLanding();
       }
     };
@@ -102,7 +121,7 @@ export const TechnicalView: React.FC<TechnicalViewProps> = ({
       el.removeEventListener('touchmove', onTouchMove);
       window.removeEventListener('keydown', onKeyDown);
     };
-  }, [activeView, onReturnLanding, selectedProject, resumeOpen]);
+  }, [activeView, onReturnLanding, modalState.project, resumeOpen]);
 
   const handleCopyEmail = async () => {
     try {
@@ -110,15 +129,25 @@ export const TechnicalView: React.FC<TechnicalViewProps> = ({
       setCopiedEmail(true);
       window.setTimeout(() => setCopiedEmail(false), 2200);
     } catch {
-      // Fallback if clipboard API unavailable
       window.location.href = `mailto:${PORTFOLIO_PROFILE.email}`;
     }
   };
 
-  const visibleSkillGroups =
-    skillFilter === 'all'
-      ? SKILL_GROUPS
-      : SKILL_GROUPS.filter((group) => group.id === skillFilter);
+  const scrollToSection = (sectionId: string) => {
+    const container = scrollRef.current;
+    const target = document.getElementById(sectionId);
+    if (container && target) {
+      const top = target.offsetTop - 68;
+      container.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+    }
+  };
+
+  const handleOpenModal = (project: ProjectItem, initialTab: ProjectModalTab) => {
+    setModalState({ project, tab: initialTab });
+  };
+
+  const featuredProject = visibleProjects[0] ?? null;
+  const secondaryProjects = visibleProjects.slice(1);
 
   return (
     <div
@@ -139,71 +168,155 @@ export const TechnicalView: React.FC<TechnicalViewProps> = ({
       </nav>
 
       <div className="tech-wrap">
-        {/* 01 Profile */}
-        <section className="tech-card">
-          <div className="tech-lab">
-            <span className="tech-lab-mark bg-[#c81e1e]" aria-hidden="true" />
-            <span>01 Profile · Technical</span>
-          </div>
-          <h1 className="tech-h1">
-            {PORTFOLIO_PROFILE.firstName}
-            <br />
-            <span>{PORTFOLIO_PROFILE.lastName}</span>
-          </h1>
-          <div className="font-mono-tech text-xs font-bold mb-2.5 text-[#111111]">
-            {PORTFOLIO_PROFILE.tech.role}
-          </div>
-          <p className="text-[14.5px] leading-[1.58] text-[#33373d] max-w-[780px]">
-            {PORTFOLIO_PROFILE.tech.bio}
-          </p>
-          <div className="flex flex-wrap gap-2 mt-3.5">
-            {PORTFOLIO_PROFILE.tech.coreFacts.map((fact) => (
-              <span key={fact} className="tech-chip-tag">
-                {fact}
-              </span>
-            ))}
-          </div>
-        </section>
-
-        {/* 02 Skills */}
-        <section className="tech-card">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+        {/* Portfolio Hero — Visual Developer Identity + Project File Index */}
+        <section
+          aria-label="Developer introduction"
+          className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch"
+        >
+          {/* Left Identity Block */}
+          <div className="lg:col-span-7 tech-card flex flex-col justify-between gap-6">
             <div>
-              <div className="tech-lab">
-                <span className="tech-lab-mark bg-[#0f5c3f]" aria-hidden="true" />
-                <span>02 Skills</span>
+              <div className="font-mono-tech text-[11.5px] font-medium text-[#4b4f55] flex items-center gap-2 whitespace-nowrap">
+                <span className="font-bold text-[#111111]">Software Developer</span>
+                <span aria-hidden="true">·</span>
+                <span>{PORTFOLIO_PROFILE.location}</span>
               </div>
-              <h2 className="tech-h2">
-                What I know, <em>honestly</em>
-              </h2>
+
+              <h1 className="tech-h1">
+                {PORTFOLIO_PROFILE.firstName}{' '}
+                <span>{PORTFOLIO_PROFILE.lastName}</span>
+              </h1>
+
+              <p className="text-[16px] sm:text-[17px] leading-[1.55] text-[#22252a] max-w-[56ch] m-0">
+                Building practical, database-backed software across Android, desktop, and SQL — designed for real workflows and clean codebases.
+              </p>
             </div>
 
-            {/* Interactive Skill Tier Filter */}
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => scrollToSection('tech-projects')}
+                className="inline-flex items-center gap-2 font-mono-tech text-[12px] font-bold uppercase px-4 py-2.5 border border-[#111111] bg-[#ffc400] text-[#111111] shadow-[3px_3px_0_#111111] cursor-pointer hover:-translate-x-px hover:-translate-y-px transition-transform whitespace-nowrap shrink-0"
+              >
+                <span>Browse Project Files</span>
+                <ArrowDown className="w-3.5 h-3.5" aria-hidden="true" />
+              </button>
+
+              <a
+                href={PORTFOLIO_PROFILE.githubUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 font-mono-tech text-[12px] font-bold uppercase px-4 py-2.5 border border-[#111111] bg-white text-[#111111] shadow-[3px_3px_0_#111111] hover:bg-[#f4f4f1] hover:-translate-x-px hover:-translate-y-px transition-all whitespace-nowrap shrink-0"
+              >
+                <span>GitHub</span>
+                <ArrowUpRight className="w-3.5 h-3.5" aria-hidden="true" />
+              </a>
+
+              <button
+                type="button"
+                onClick={() => scrollToSection('tech-contact')}
+                className="font-mono-tech text-[12px] font-bold uppercase text-[#111111] underline underline-offset-4 hover:text-[#0f5c3f] px-2 py-2 cursor-pointer whitespace-nowrap shrink-0"
+              >
+                Contact
+              </button>
+            </div>
+          </div>
+
+          {/* Right Directory Index Window */}
+          <aside
+            aria-label="Project file directory"
+            className="lg:col-span-5 bg-white border border-[#111111] shadow-[4px_5px_0_#111111] flex flex-col overflow-hidden"
+          >
+            <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-[#111111] text-white">
+              <div className="flex items-center gap-2 min-w-0">
+                <FolderOpen className="w-3.5 h-3.5 text-[#ffc400] shrink-0" aria-hidden="true" />
+                <span className="font-mono-tech text-[11.5px] font-bold truncate">
+                  tarun-suthar / projects
+                </span>
+              </div>
+              <span className="font-mono-tech text-[10.5px] text-white/70 shrink-0 tabular-nums">
+                {PROJECTS.length} files
+              </span>
+            </div>
+
+            <div className="divide-y divide-[#111111]/12 flex-1 flex flex-col justify-center">
+              {PROJECTS.map((project) => (
+                <button
+                  key={project.id}
+                  type="button"
+                  onClick={() => handleOpenModal(project, 'preview')}
+                  className="group w-full text-left px-4 py-3.5 flex items-center justify-between gap-3 hover:bg-[#ffc400]/22 transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <DirectoryRowIcon ext={project.fileExt} />
+                    <div className="min-w-0">
+                      <div className="font-mono-tech text-[12.5px] font-bold text-[#111111] truncate group-hover:underline">
+                        {project.fileName}
+                      </div>
+                      <div className="text-[12.5px] text-[#4b4f55] truncate">
+                        {project.title} · {project.fileTypeLabel}
+                      </div>
+                    </div>
+                  </div>
+                  <span className="font-mono-tech text-[10.5px] font-bold uppercase text-[#111111] shrink-0 opacity-75 group-hover:opacity-100">
+                    Preview →
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <div className="px-4 py-2.5 bg-[#f9faf9] border-t border-[#111111]/15 flex items-center justify-between gap-2 font-mono-tech text-[11px] text-[#4b4f55]">
+              <span className="truncate">Select a file to preview</span>
+              <span className="text-[#111111] font-bold whitespace-nowrap shrink-0">
+                .apk · .jar · .py
+              </span>
+            </div>
+          </aside>
+        </section>
+
+        {/* Infinite Moving Tech Stack Logo Strip */}
+        <TechStackMarquee />
+
+        {/* Visual Project Files Showcase */}
+        <section id="tech-projects" aria-labelledby="projects-heading" className="space-y-6 pt-2">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <h2
+                id="projects-heading"
+                className="text-[28px] sm:text-[34px] font-bold tracking-[-0.035em] leading-none text-[#111111]"
+              >
+                Project Files
+              </h2>
+              <p className="mt-1.5 text-[14.5px] text-[#4b4f55] m-0">
+                Visual walkthroughs, interactive previews, and source repositories.
+              </p>
+            </div>
+
+            {/* Interactive File Extension Filter */}
             <div
               className="flex flex-wrap items-center gap-1.5"
               role="group"
-              aria-label="Filter skills by depth"
+              aria-label="Filter projects by file type"
             >
               {(
                 [
-                  { id: 'all', label: 'All (4)' },
-                  { id: 'hands-on', label: 'Hands-on' },
-                  { id: 'foundational', label: 'Foundational' },
-                  { id: 'learning', label: 'Learning' },
-                  { id: 'ai-tools', label: 'AI Tools' },
+                  { id: 'all', label: `All Files (${fileCounts.all})` },
+                  { id: '.apk', label: `.apk (${fileCounts['.apk']})` },
+                  { id: '.jar', label: `.jar (${fileCounts['.jar']})` },
+                  { id: '.py', label: `.py (${fileCounts['.py']})` },
                 ] as const
               ).map((tab) => {
-                const active = skillFilter === tab.id;
+                const active = fileFilter === tab.id;
                 return (
                   <button
                     key={tab.id}
                     type="button"
-                    onClick={() => setSkillFilter(tab.id)}
+                    onClick={() => setFileFilter(tab.id)}
                     aria-pressed={active}
-                    className={`font-mono-tech text-[10.5px] font-bold uppercase tracking-[0.08em] px-2.5 py-1.5 border border-[#111111] cursor-pointer transition-colors whitespace-nowrap ${
+                    className={`font-mono-tech text-[11px] font-bold px-3 py-1.5 border border-[#111111] cursor-pointer transition-colors whitespace-nowrap shrink-0 ${
                       active
-                        ? 'bg-[#111111] text-[#ffc400]'
-                        : 'bg-white text-[#111111] hover:bg-[#ffc400]/40'
+                        ? 'bg-[#111111] text-[#ffc400] shadow-[2px_2px_0_#ffc400]'
+                        : 'bg-white text-[#111111] hover:bg-[#ffc400]/35'
                     }`}
                   >
                     {tab.label}
@@ -213,205 +326,79 @@ export const TechnicalView: React.FC<TechnicalViewProps> = ({
             </div>
           </div>
 
-          <div
-            className={`grid gap-4 mt-2 ${
-              visibleSkillGroups.length === 1
-                ? 'grid-cols-1'
-                : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'
-            }`}
-          >
-            {visibleSkillGroups.map((group) => (
-              <div key={group.id}>
-                <span
-                  className="font-mono-tech text-[11px] font-bold px-2 py-0.5 inline-block text-white mb-2.5"
-                  style={{ backgroundColor: group.accentColor }}
-                >
-                  {group.label}
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {group.skills.map((skill) => (
-                    <span key={skill} className="tech-chip-tag">
-                      {skill}
-                    </span>
-                  ))}
-                </div>
+          {/* Featured File Card + 2-Column File Grid */}
+          <div className="space-y-6">
+            {featuredProject && (
+              <ProjectFileCard
+                project={featuredProject}
+                featured
+                onOpenModal={handleOpenModal}
+              />
+            )}
+
+            {secondaryProjects.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+                {secondaryProjects.map((project) => (
+                  <ProjectFileCard
+                    key={project.id}
+                    project={project}
+                    onOpenModal={handleOpenModal}
+                  />
+                ))}
               </div>
-            ))}
+            )}
           </div>
         </section>
 
-        {/* 03 Featured Projects */}
-        <div className="tech-lab mt-1.5">
-          <span className="tech-lab-mark bg-[#c81e1e]" aria-hidden="true" />
-          <span>03 Featured projects</span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 -mt-1.5">
-          {PROJECTS.map((project) => (
-            <article
-              key={project.id}
-              className="tech-card bg-white flex flex-col gap-3 min-w-0"
-            >
-              <h3 className="text-[19px] font-bold tracking-[-0.02em] leading-[1.15]">
-                {project.title}
-              </h3>
-              <div className="tech-lab">{project.subtitle}</div>
-              <p className="text-[14px] leading-[1.52] text-[#33373d] m-0">
-                {project.summary}
-              </p>
-              <ul className="pl-4 list-disc text-[13px] leading-[1.5] text-[#33373d] space-y-1 m-0">
-                {project.highlights.map((bullet) => (
-                  <li key={bullet}>{bullet}</li>
-                ))}
-              </ul>
-              <div className="flex flex-wrap gap-1.5">
-                {project.stack.map((tech) => (
-                  <span key={tech} className="tech-chip-tag">
-                    {tech}
-                  </span>
-                ))}
-              </div>
-              <div className="font-mono-tech text-[11.5px] leading-[1.5] text-[#4b4f55] border-t border-[#cccccc] pt-2 mt-auto">
-                {project.demonstrates}
-              </div>
-              <div className="flex flex-wrap items-center gap-3 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setSelectedProject(project)}
-                  aria-label={`Inspect ${project.title} architecture`}
-                  className="inline-flex items-center gap-1.5 font-mono-tech text-[11px] font-bold uppercase px-2.5 py-1.5 border border-[#111111] bg-[#ffc400] text-[#111111] shadow-[2px_2px_0_#111111] cursor-pointer hover:translate-x-[-1px] hover:translate-y-[-1px] transition-transform"
-                >
-                  <Layers className="w-3 h-3" aria-hidden="true" />
-                  <span>Architecture</span>
-                </button>
-                <a
-                  href={project.githubUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-mono-tech text-[11px] font-bold text-[#111111] uppercase underline underline-offset-4 hover:text-[#0f5c3f]"
-                >
-                  Source ↗
-                </a>
-              </div>
-            </article>
-          ))}
-        </div>
-
-        {/* 04 Education & 05 Certifications */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <section className="tech-card">
-            <div className="tech-lab">
-              <span className="tech-lab-mark bg-[#ffc400] border border-[#111111]" aria-hidden="true" />
-              <span>04 Education</span>
-            </div>
-            <h2 className="tech-h2">Degrees</h2>
+        {/* Compact Contact Footer */}
+        <section id="tech-contact" className="tech-card is-dark mt-2">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-5">
             <div>
-              {EDUCATION.map((edu, index) => (
-                <div
-                  key={edu.degree}
-                  className={`flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-3 py-2.5 text-[13.5px] ${
-                    index > 0 ? 'border-t border-[#cccccc]' : ''
-                  }`}
-                >
-                  <strong className="font-semibold">{edu.degree}</strong>
-                  <span className="font-mono-tech text-[11.5px] text-[#4b4f55] sm:text-right">
-                    {edu.meta}
-                    <br />
-                    {edu.institution}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="tech-card">
-            <div className="tech-lab">
-              <span className="tech-lab-mark bg-[#0f5c3f]" aria-hidden="true" />
-              <span>05 Certifications &amp; achievements</span>
-            </div>
-            <h2 className="tech-h2">Proof</h2>
-            <div>
-              {CERTIFICATIONS.map((cert, index) => (
-                <div
-                  key={cert.title}
-                  className={`flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-3 py-2.5 text-[13.5px] ${
-                    index > 0 ? 'border-t border-[#cccccc]' : ''
-                  }`}
-                >
-                  <strong className="font-semibold">{cert.title}</strong>
-                  <span className="font-mono-tech text-[11.5px] text-[#4b4f55] sm:text-right">
-                    {cert.dateOrStatus}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
-
-        {/* 06 Currently Learning */}
-        <section className="tech-card">
-          <div className="tech-lab">
-            <span className="tech-lab-mark bg-[#c81e1e]" aria-hidden="true" />
-            <span>06 Currently learning</span>
-          </div>
-          <h2 className="tech-h2">
-            Goals, <em>not claims</em>
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {LEARNING_GOALS.map((goal) => (
-              <div key={goal.title}>
-                <strong className="text-[14.5px] font-bold">{goal.title}</strong>
-                <p className="mt-1 text-[13.5px] leading-[1.5] text-[#33373d] m-0">
-                  {goal.description}
-                </p>
+              <div className="font-mono-tech text-[11px] uppercase tracking-[0.14em] text-[#ffc400]">
+                Contact
               </div>
-            ))}
-          </div>
-        </section>
+              <h2 className="tech-h2 text-white mt-1.5 mb-0">
+                Let’s build something practical.
+              </h2>
+            </div>
 
-        {/* 07 Contact */}
-        <section className="tech-card is-dark">
-          <div className="tech-lab text-[#bbbbbb]">
-            <span className="tech-lab-mark bg-[#c81e1e]" aria-hidden="true" />
-            <span>07 Contact</span>
-          </div>
-          <h2 className="tech-h2 text-white">Let’s build something practical</h2>
-          <div className="tech-btn-bar flex flex-wrap gap-2.5 mt-2">
-            <a href={`mailto:${PORTFOLIO_PROFILE.email}`}>Email</a>
-            <button
-              type="button"
-              onClick={handleCopyEmail}
-              className="inline-flex items-center gap-1.5"
-            >
-              {copiedEmail ? (
-                <>
-                  <Check className="w-3.5 h-3.5 text-[#0f5c3f]" aria-hidden="true" />
-                  <span>Copied Email</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="w-3.5 h-3.5" aria-hidden="true" />
-                  <span>Copy Email</span>
-                </>
-              )}
-            </button>
-            <a
-              href={PORTFOLIO_PROFILE.linkedinUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              LinkedIn ↗
-            </a>
-            <a
-              href={PORTFOLIO_PROFILE.githubUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              GitHub ↗
-            </a>
-            <button type="button" onClick={() => setResumeOpen(true)}>
-              Resume Sheet
-            </button>
+            <div className="tech-btn-bar flex flex-wrap gap-2.5">
+              <a href={`mailto:${PORTFOLIO_PROFILE.email}`}>Email</a>
+              <button
+                type="button"
+                onClick={handleCopyEmail}
+                className="inline-flex items-center gap-1.5"
+              >
+                {copiedEmail ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-[#0f5c3f]" aria-hidden="true" />
+                    <span>Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" aria-hidden="true" />
+                    <span>Copy Email</span>
+                  </>
+                )}
+              </button>
+              <a
+                href={PORTFOLIO_PROFILE.githubUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                GitHub ↗
+              </a>
+              <a
+                href={PORTFOLIO_PROFILE.linkedinUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                LinkedIn ↗
+              </a>
+              <button type="button" onClick={() => setResumeOpen(true)}>
+                Resume PDF
+              </button>
+            </div>
           </div>
         </section>
 
@@ -433,8 +420,9 @@ export const TechnicalView: React.FC<TechnicalViewProps> = ({
       </div>
 
       <ProjectModal
-        project={selectedProject}
-        onClose={() => setSelectedProject(null)}
+        project={modalState.project}
+        initialTab={modalState.tab}
+        onClose={() => setModalState((prev) => ({ ...prev, project: null }))}
       />
       <ResumeModal isOpen={resumeOpen} onClose={() => setResumeOpen(false)} />
     </div>

@@ -7,15 +7,32 @@ export interface SkillGroup {
   skills: string[];
 }
 
+export type ProjectFileExt = '.apk' | '.jar' | '.py';
+
+export interface TechLogoItem {
+  id: string;
+  name: string;
+  accent: string;
+}
+
 export interface ProjectItem {
   id: string;
   title: string;
+  fileName: string;
+  fileExt: ProjectFileExt;
+  fileTypeLabel: string;
+  fileAccent: string;
+  platform: string;
   subtitle: string;
   summary: string;
   highlights: string[];
   stack: string[];
   demonstrates: string;
+  previewImage: string;
+  previewAlt: string;
+  fallbackGradient: string;
   githubUrl: string;
+  liveUrl?: string;
   architecture: {
     layers: { name: string; role: string }[];
     dataFlow: string;
@@ -157,20 +174,51 @@ export const SKILL_GROUPS: SkillGroup[] = [
   },
 ];
 
+export const TECH_STACK_LOGOS: TechLogoItem[] = [
+  { id: 'java', name: 'Java', accent: '#c81e1e' },
+  { id: 'python', name: 'Python', accent: '#2563eb' },
+  { id: 'sql', name: 'SQL', accent: '#0f5c3f' },
+  { id: 'android', name: 'Android', accent: '#0f5c3f' },
+  { id: 'mysql', name: 'MySQL', accent: '#1d4ed8' },
+  { id: 'sqlite', name: 'SQLite', accent: '#0369a1' },
+  { id: 'firebase', name: 'Firebase', accent: '#d97706' },
+  { id: 'javafx', name: 'JavaFX', accent: '#b45309' },
+  { id: 'git', name: 'Git', accent: '#c81e1e' },
+  { id: 'github', name: 'GitHub', accent: '#111111' },
+  { id: 'maven', name: 'Maven', accent: '#991b1b' },
+  { id: 'gradle', name: 'Gradle', accent: '#0f5c3f' },
+  { id: 'django', name: 'Django', accent: '#0f5c3f' },
+  { id: 'flask', name: 'Flask', accent: '#111111' },
+  { id: 'docker', name: 'Docker', accent: '#2563eb' },
+  { id: 'aws', name: 'AWS', accent: '#d97706' },
+  { id: 'linux', name: 'Linux', accent: '#111111' },
+  { id: 'openai', name: 'ChatGPT', accent: '#0f5c3f' },
+  { id: 'claude', name: 'Claude', accent: '#b45309' },
+];
+
 export const PROJECTS: ProjectItem[] = [
   {
     id: 'order-analyzer',
     title: 'Order Analyzer',
+    fileName: 'order-analyzer.apk',
+    fileExt: '.apk',
+    fileTypeLabel: 'Android App',
+    fileAccent: '#0f5c3f',
+    platform: 'Android · SQLite + Firestore',
     subtitle: 'Android app · Java',
     summary:
-      'Helps a retail business record orders, review daily totals, and analyze order data. Used in a real shop workflow.',
+      'Retail order tracker built for a real shop workflow — logs orders offline first, syncs to the cloud, and exports daily Excel/CSV summaries.',
     highlights: [
-      'Offline-first SQLite',
-      'Firebase Auth + Firestore sync',
-      'Excel/CSV analysis, CSV export',
+      'Offline-first SQLite ledger for zero billing downtime',
+      'Firebase Auth & Firestore background sync',
+      'Apache POI spreadsheet parsing & daily CSV export',
     ],
-    stack: ['Java', 'SQLite', 'Firestore', 'Apache POI'],
-    demonstrates: 'Shows: local DB design, cloud sync, spreadsheet processing.',
+    stack: ['Java', 'Android', 'SQLite', 'Firestore', 'Apache POI'],
+    demonstrates: 'Local DB design · Cloud sync · Spreadsheet processing',
+    previewImage: '/src/assets/images/project_order_analyzer_1795258265910.jpg',
+    previewAlt:
+      'Order Analyzer Android app showing daily order volume chart, offline SQLite ledger, and CSV export controls',
+    fallbackGradient: 'linear-gradient(135deg, #0f5c3f 0%, #111111 100%)',
     githubUrl: 'https://github.com/tarun-suthar-04?tab=repositories',
     architecture: {
       layers: [
@@ -189,16 +237,25 @@ export const PROJECTS: ProjectItem[] = [
   {
     id: 'pixault',
     title: 'Pixault',
+    fileName: 'pixault.jar',
+    fileExt: '.jar',
+    fileTypeLabel: 'Desktop JavaFX',
+    fileAccent: '#111111',
+    platform: 'Java 21 · AES-256 + LSB',
     subtitle: 'Desktop app · Java 21 + JavaFX',
     summary:
-      'Encrypts sensitive data and hides it inside an image. An educational project, not an audited security product.',
+      'Encrypts sensitive text with AES-256 and embeds it inside carrier images using randomized LSB steganography and OTP verification.',
     highlights: [
-      'AES-256 · PBKDF2 · SHA-256',
-      'Randomized LSB steganography',
-      'Integrity check + email OTP',
+      'PBKDF2 key derivation + AES-256 encryption + SHA-256 check',
+      'Randomized pixel-channel LSB steganography',
+      'MySQL user records & email OTP unlock gating',
     ],
-    stack: ['JavaFX', 'MySQL', 'Maven'],
-    demonstrates: 'Shows: crypto in an app workflow, auth, DB integration.',
+    stack: ['Java 21', 'JavaFX', 'MySQL', 'Maven'],
+    demonstrates: 'Applied cryptography · Auth gating · Desktop UI',
+    previewImage: '/src/assets/images/project_pixault_1795258346548.jpg',
+    previewAlt:
+      'Pixault JavaFX desktop application displaying carrier image steganography and AES-256 encryption key verification',
+    fallbackGradient: 'linear-gradient(135deg, #1f2937 0%, #111111 100%)',
     githubUrl: 'https://github.com/tarun-suthar-04?tab=repositories',
     architecture: {
       layers: [
@@ -217,14 +274,25 @@ export const PROJECTS: ProjectItem[] = [
   {
     id: 'employee-management',
     title: 'Employee Management System',
+    fileName: 'employee-mgr.py',
+    fileExt: '.py',
+    fileTypeLabel: 'Python GUI',
+    fileAccent: '#2563eb',
+    platform: 'Python · Tkinter + MySQL',
     subtitle: 'Desktop app · Python',
-    summary: 'Manage employee records through a GUI backed by MySQL.',
+    summary:
+      'Clean desktop directory to add, search, update, and remove employee records directly against a relational MySQL database.',
     highlights: [
-      'Add, update, delete records',
-      'Table view of all employees',
+      'Parameterized SQL queries for safe CRUD mutations',
+      'Live Treeview employee table with instant refresh',
+      'Structured Tkinter form validation & record binding',
     ],
     stack: ['Python', 'Tkinter', 'MySQL'],
-    demonstrates: 'Shows: Python GUI, MySQL connection, CRUD.',
+    demonstrates: 'Python GUI · MySQL connector · Full CRUD',
+    previewImage: '/src/assets/images/project_employee_manager_1795258264291.jpg',
+    previewAlt:
+      'Employee Management System Python desktop GUI showing searchable MySQL employee table and add/edit record sidebar',
+    fallbackGradient: 'linear-gradient(135deg, #1d4ed8 0%, #111111 100%)',
     githubUrl: 'https://github.com/tarun-suthar-04?tab=repositories',
     architecture: {
       layers: [

@@ -881,6 +881,72 @@ body[data-v='cre'] #cre {
   box-shadow: 4px 4px 0 var(--y);
 }
 
+/* Infinite Tech Stack Logo Marquee */
+@keyframes tech-marquee-scroll {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.tech-marquee-track {
+  display: flex;
+  width: max-content;
+  will-change: transform;
+  animation: tech-marquee-scroll 34s linear infinite;
+}
+
+.tech-marquee-track:hover {
+  animation-play-state: paused;
+}
+
+.tech-marquee-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-right: 12px;
+  flex-shrink: 0;
+}
+
+.tech-marquee-tile {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 13px;
+  background: #ffffff;
+  border: 1px solid #111111;
+  box-shadow: 2px 2px 0 #111111;
+  flex-shrink: 0;
+  transition: transform 0.16s ease, background-color 0.16s ease;
+}
+
+.tech-marquee-tile:hover {
+  transform: translateY(-2px);
+  background: #fffbeb;
+}
+
+/* File-Folder Tab Silhouette for Project Cards */
+.project-file-tab {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  padding: 7px 14px 7px 10px;
+  margin-bottom: -1px;
+  background: #ffffff;
+  border: 1px solid #111111;
+  border-bottom: 1px solid #ffffff;
+}
+
+.project-file-shell {
+  position: relative;
+  z-index: 1;
+}
+
 /* ================= CREATIVE VIEW (STUDIO GRID + CUBIC GLASS) ================= */
 #cre {
   background-color: #f7f8fa;
@@ -1082,6 +1148,9 @@ body[data-v='cre'] #cre {
   .manifesto-word-btn,
   .manifesto-preview-card {
     transition: none !important;
+  }
+  .tech-marquee-track {
+    animation: none !important;
   }
 }
 
