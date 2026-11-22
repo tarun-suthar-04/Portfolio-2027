@@ -15,6 +15,20 @@ export interface TechLogoItem {
   accent: string;
 }
 
+export interface ProjectCaseStudy {
+  challengeHeading: string;
+  challengeBody: string;
+  solutionHeading: string;
+  solutionBody: string;
+  overviewHeading: string;
+  overviewBody: string[];
+  scopeLabel: string;
+  deliverableLabel: string;
+  outcomeHeading: string;
+  outcomeSummary: string;
+  deliveredPoints: string[];
+}
+
 export interface ProjectItem {
   id: string;
   title: string;
@@ -38,6 +52,9 @@ export interface ProjectItem {
     dataFlow: string;
     engineeringNotes: string[];
   };
+  caseStudy?: ProjectCaseStudy;
+  comingSoon?: boolean;
+  disabled?: boolean;
 }
 
 export interface EducationItem {
@@ -77,6 +94,7 @@ export interface CreativeWorkItem {
   brief: string;
   promptApproach: string;
   palette: string[];
+  featureImage?: string;
 }
 
 export interface ProcessStep {
@@ -86,9 +104,34 @@ export interface ProcessStep {
   caption: string;
 }
 
+export type CreativeToolLogoId =
+  | 'google-flow'
+  | 'canva'
+  | 'capcut'
+  | 'chatgpt'
+  | 'ai-image';
+
 export interface ToolkitItem {
+  id: CreativeToolLogoId;
   name: string;
   role: string;
+  accent: string;
+}
+
+export type PlatformLogoId =
+  | 'fiverr'
+  | 'instagram'
+  | 'linkedin'
+  | 'github'
+  | 'portfolio';
+
+export interface CreativePlatformLink {
+  id: PlatformLogoId;
+  label: string;
+  handle: string;
+  href: string;
+  external: boolean;
+  accent: string;
 }
 
 export const PORTFOLIO_PROFILE = {
@@ -100,6 +143,9 @@ export const PORTFOLIO_PROFILE = {
   location: 'Indore, India',
   linkedinUrl: 'https://linkedin.com/in/tarun-suthar-307838266',
   githubUrl: 'https://github.com/tarun-suthar-04',
+  instagramUrl: 'https://instagram.com/tarunsuthar',
+  fiverrUrl: 'https://www.fiverr.com/tarunsuthar',
+  portfolioUrl: '#creative-work',
   tech: {
     role: 'Software Developer · SDE I (entry-level)',
     bio: 'M.Sc. Computer Science graduate building practical, database-backed applications in Java and Python, using AI-assisted development tools in my workflow. Seeking a Software Development Engineer I role.',
@@ -233,6 +279,30 @@ export const PROJECTS: ProjectItem[] = [
         'Normalized order line items locally for rapid daily revenue and item-level aggregation.',
       ],
     },
+    caseStudy: {
+      challengeHeading: 'Keeping daily retail billing reliable when shop connectivity drops.',
+      challengeBody:
+        'A busy retail counter cannot pause order entry whenever mobile data or shop Wi-Fi fluctuates. Cloud-only trackers stall billing at peak hours, while manual spreadsheets make end-of-day reconciliation slow and error-prone.',
+      solutionHeading: 'Offline-first SQLite writes paired with background Firestore sync and CSV export.',
+      solutionBody:
+        'Order Analyzer commits every order directly to a normalized local SQLite ledger first so counter entries never block. Once connectivity returns, authenticated background reconciliation syncs queued transactions to Cloud Firestore while Apache POI handles Excel/CSV parsing and daily summary exports.',
+      overviewHeading: 'The project.',
+      overviewBody: [
+        'Built in Java for Android, Order Analyzer models a practical small-shop workflow from order capture through end-of-day reporting. Instead of treating offline usage as an afterthought, local SQLite storage serves as the primary write path with indexed timestamps for fast filtering.',
+        'To bridge daily mobile entry with desktop accounting habits, the app integrates Apache POI for reading incoming spreadsheets and exporting clean daily CSV ledgers—giving shop operators structured records without leaving Android.',
+      ],
+      scopeLabel: 'Android · Offline-First Retail Ledger',
+      deliverableLabel: 'Android APK · SQLite + Firestore Sync',
+      outcomeHeading: 'The outcome.',
+      outcomeSummary:
+        'A self-contained Android order tracker that keeps billing uninterrupted offline, reconciles cleanly to Firebase when online, and produces structured daily spreadsheets on demand.',
+      deliveredPoints: [
+        'Zero-wait local SQLite order persistence designed around intermittent shop connectivity.',
+        'Firebase Auth & Cloud Firestore background sync for multi-session cloud backup.',
+        'Apache POI spreadsheet parsing and one-tap daily CSV/Excel summary generation.',
+        'Normalized local line-item schema for rapid item-level and daily revenue aggregation.',
+      ],
+    },
   },
   {
     id: 'pixault',
@@ -270,6 +340,30 @@ export const PROJECTS: ProjectItem[] = [
         'Combines integrity verification with email OTP gating before payload extraction.',
       ],
     },
+    caseStudy: {
+      challengeHeading: 'Protecting concealed text payloads beyond naive sequential pixel hiding.',
+      challengeBody:
+        'Basic steganography tools often embed unencrypted text sequentially from the first pixel of an image—making hidden data trivial to detect or read if recovered. A trustworthy learning workflow needed layered encryption, integrity verification, and controlled extraction.',
+      solutionHeading: 'AES-256 encryption, randomized LSB pixel distribution, and OTP-gated extraction.',
+      solutionBody:
+        'Pixault derives encryption keys via PBKDF2, encrypts the message with AES-256, appends a SHA-256 integrity digest, and scatters encrypted bits across carrier PNG pixels using a seeded randomized LSB sequence. Extraction requires email OTP verification backed by MySQL user records.',
+      overviewHeading: 'The project.',
+      overviewBody: [
+        'Developed on Java 21 with a JavaFX desktop shell and Maven build pipeline, Pixault brings applied cryptography and image steganography together inside a clear encode/decode workspace.',
+        'Built transparently as an educational cryptography and steganography application, every stage—from key derivation and SHA-256 tamper checking to MySQL audit logging and OTP verification—is separated into dedicated Java modules for clarity and inspection.',
+      ],
+      scopeLabel: 'Java 21 · Cryptography & Steganography',
+      deliverableLabel: 'Desktop JavaFX JAR · MySQL Auth Store',
+      outcomeHeading: 'The outcome.',
+      outcomeSummary:
+        'An inspectable desktop security application combining standard Java cryptographic primitives, randomized pixel embedding, and database-backed OTP access gating.',
+      deliveredPoints: [
+        'End-to-end PBKDF2 key derivation, AES-256 encryption, and SHA-256 integrity checking.',
+        'Deterministic seeded LSB pixel-channel embedding that preserves lossless PNG carrier fidelity.',
+        'MySQL-backed user records, payload metadata tracking, and email OTP unlock gating.',
+        'Dedicated JavaFX encode/decode desktop workspace with live carrier image preview.',
+      ],
+    },
   },
   {
     id: 'employee-management',
@@ -304,6 +398,30 @@ export const PROJECTS: ProjectItem[] = [
       engineeringNotes: [
         'Clean separation between Tkinter widget bindings and MySQL database operations.',
         'Supports live table refresh immediately after record mutations.',
+      ],
+    },
+    caseStudy: {
+      challengeHeading: 'Keeping relational employee records accurate without raw SQL overhead.',
+      challengeBody:
+        'Managing staff records manually across ad-hoc files or direct SQL consoles invites formatting mismatches, partial updates, and unsafe string-concatenated queries. Teams need a straightforward desktop interface that validates input and reflects every change immediately.',
+      solutionHeading: 'Structured Tkinter GUI bound to parameterized MySQL CRUD operations.',
+      solutionBody:
+        'Employee Management System pairs a clean Python Tkinter form and live Treeview directory with a dedicated controller layer. Every insert, search, update, and delete executes through parameterized MySQL queries and refreshes the on-screen ledger immediately.',
+      overviewHeading: 'The project.',
+      overviewBody: [
+        'Built with Python, Tkinter, and the MySQL connector, the application separates user-interface widget bindings from validation logic and relational database queries.',
+        'Selecting any row in the Treeview populates the form fields directly for fast edits or removal, while structured validation checks prevent incomplete records from reaching the MySQL table.',
+      ],
+      scopeLabel: 'Python Desktop · Relational CRUD',
+      deliverableLabel: 'Python Tkinter GUI · MySQL Connector',
+      outcomeHeading: 'The outcome.',
+      outcomeSummary:
+        'A clean, lightweight desktop directory that turns relational MySQL staff records into a safe, immediately searchable CRUD workflow.',
+      deliveredPoints: [
+        'Parameterized SQL statements across all create, read, update, and delete operations.',
+        'Live Tkinter Treeview table with instant search filtering and post-mutation refresh.',
+        'Structured form validation and two-way row selection binding for rapid edits.',
+        'Clear separation between GUI widgets, validation controller, and MySQL connector logic.',
       ],
     },
   },
@@ -541,11 +659,79 @@ export const PROCESS_STEPS: ProcessStep[] = [
 ];
 
 export const CREATIVE_TOOLKIT: ToolkitItem[] = [
-  { name: 'Google Flow', role: 'Cinematic motion sequencing & scene pacing' },
-  { name: 'Canva', role: 'Editorial layout composition & typography polish' },
-  { name: 'CapCut', role: 'Rhythm editing, transitions & short-form visual cuts' },
-  { name: 'ChatGPT', role: 'Concept ideation & structured prompt iteration' },
-  { name: 'AI image generators', role: 'High-contrast frame synthesis & style exploration' },
+  {
+    id: 'google-flow',
+    name: 'Google Flow',
+    role: 'Cinematic motion sequencing & scene pacing',
+    accent: '#2563eb',
+  },
+  {
+    id: 'canva',
+    name: 'Canva',
+    role: 'Editorial layout composition & typography polish',
+    accent: '#00c4cc',
+  },
+  {
+    id: 'capcut',
+    name: 'CapCut',
+    role: 'Rhythm editing, transitions & short-form visual cuts',
+    accent: '#141518',
+  },
+  {
+    id: 'chatgpt',
+    name: 'ChatGPT',
+    role: 'Concept ideation & structured prompt iteration',
+    accent: '#10a37f',
+  },
+  {
+    id: 'ai-image',
+    name: 'AI Image Gen',
+    role: 'High-contrast frame synthesis & style exploration',
+    accent: '#7c3aed',
+  },
+];
+
+export const CREATIVE_PLATFORM_LINKS: CreativePlatformLink[] = [
+  {
+    id: 'fiverr',
+    label: 'Fiverr',
+    handle: 'Freelance gigs',
+    href: PORTFOLIO_PROFILE.fiverrUrl,
+    external: true,
+    accent: '#1dbf73',
+  },
+  {
+    id: 'portfolio',
+    label: 'Portfolio',
+    handle: 'Full visual archive',
+    href: PORTFOLIO_PROFILE.portfolioUrl,
+    external: false,
+    accent: '#2563eb',
+  },
+  {
+    id: 'instagram',
+    label: 'Instagram',
+    handle: '@tarunsuthar',
+    href: PORTFOLIO_PROFILE.instagramUrl,
+    external: true,
+    accent: '#e1306c',
+  },
+  {
+    id: 'linkedin',
+    label: 'LinkedIn',
+    handle: 'Tarun Suthar',
+    href: PORTFOLIO_PROFILE.linkedinUrl,
+    external: true,
+    accent: '#0a66c2',
+  },
+  {
+    id: 'github',
+    label: 'GitHub',
+    handle: 'tarun-suthar-04',
+    href: PORTFOLIO_PROFILE.githubUrl,
+    external: true,
+    accent: '#141518',
+  },
 ];
 
 export type ManifestoWordKey = 'create' | 'experiment' | 'ideas' | 'imagination' | 'life';

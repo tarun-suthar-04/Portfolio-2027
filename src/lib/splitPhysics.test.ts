@@ -72,11 +72,15 @@ test('calculatePullProgress normalizes overscroll return indicator', () => {
 
 test('parseViewFromLocation and viewToHash handle deep links cleanly', () => {
   assert.equal(parseViewFromLocation('#tech', ''), 'tech');
+  assert.equal(parseViewFromLocation('#tech/project/order-analyzer', ''), 'tech');
   assert.equal(parseViewFromLocation('#creative', ''), 'cre');
+  assert.equal(parseViewFromLocation('#admin', ''), 'admin');
   assert.equal(parseViewFromLocation('', '?view=cre'), 'cre');
   assert.equal(parseViewFromLocation('', '?view=technical'), 'tech');
+  assert.equal(parseViewFromLocation('', '?view=admin'), 'admin');
   assert.equal(parseViewFromLocation('', ''), 'land');
   assert.equal(viewToHash('tech'), '#tech');
   assert.equal(viewToHash('cre'), '#creative');
+  assert.equal(viewToHash('admin'), '#admin');
   assert.equal(viewToHash('land'), '');
 });

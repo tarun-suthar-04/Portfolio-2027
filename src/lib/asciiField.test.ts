@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ASCII_FIELD_CONFIG,
+  computeAsciiCellColors,
   computeAsciiCellState,
   computeAsciiDrift,
   createAsciiGrid,
@@ -82,4 +83,20 @@ test('createAsciiGrid populates cells and mutateRandomAsciiCells updates subset'
   assert.equal(mutated, 5);
   const changedCount = cells.filter((c, i) => c.char !== before[i]).length;
   assert.ok(changedCount >= 1);
+});
+
+test('computeAsciiCellColors uses Technical ink at rest and signal-yellow highlight at peak swell', () => {
+  const resting = computeAsciiCellColors(0, 0.16);
+  assert.equal(resting.textStyle, 'rgba(17, 17, 17, 0.160)');
+  assert.equal(resting.highlightBg, null);
+  assert.equal(resting.highlightBorder, null);
+
+  const mid = computeAsciiCellColors(0.25, 0.4);
+  assert.ok(mid.textStyle.startsWith('rgba('));
+  assert.equal(mid.highlightBg, null);
+
+  const peak = computeAsciiCellColors(0.95, 1);
+  assert.equal(peak.textStyle, 'rgba(17, 17, 17, 1.00)');
+  assert.ok(peak.highlightBg?.startsWith('rgba(255, 196, 0,'));
+  assert.ok(peak.highlightBorder?.startsWith('rgba(17, 17, 17,'));
 });

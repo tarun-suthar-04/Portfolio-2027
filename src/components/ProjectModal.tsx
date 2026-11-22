@@ -49,7 +49,10 @@ function computeSimpleHexDigest(input: string): string {
   return `${h1.toString(16).padStart(8, '0')}${h2.toString(16).padStart(8, '0')}`;
 }
 
-const InteractiveProjectWorkbench: React.FC<{ projectId: string }> = ({ projectId }) => {
+export const InteractiveProjectWorkbench: React.FC<{
+  projectId: string;
+  idPrefix?: string;
+}> = ({ projectId, idPrefix = 'modal' }) => {
   // Order Analyzer interactive demo state
   const [orders, setOrders] = useState<DemoOrder[]>(INITIAL_DEMO_ORDERS);
   const [orderFilter, setOrderFilter] = useState<'All' | 'Synced' | 'Offline'>('All');
@@ -173,11 +176,11 @@ const InteractiveProjectWorkbench: React.FC<{ projectId: string }> = ({ projectI
         </div>
 
         <div className="flex flex-col sm:flex-row gap-2">
-          <label htmlFor="pixault-demo-input" className="sr-only">
+          <label htmlFor={`${idPrefix}-pixault-demo-input`} className="sr-only">
             Sample payload text
           </label>
           <input
-            id="pixault-demo-input"
+            id={`${idPrefix}-pixault-demo-input`}
             type="text"
             value={secretText}
             onChange={(ev) => {
@@ -227,11 +230,11 @@ const InteractiveProjectWorkbench: React.FC<{ projectId: string }> = ({ projectI
             className="w-3.5 h-3.5 text-[#4b4f55] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
             aria-hidden="true"
           />
-          <label htmlFor="emp-demo-search" className="sr-only">
+          <label htmlFor={`${idPrefix}-emp-demo-search`} className="sr-only">
             Filter sample employees
           </label>
           <input
-            id="emp-demo-search"
+            id={`${idPrefix}-emp-demo-search`}
             type="search"
             value={empQuery}
             onChange={(ev) => setEmpQuery(ev.target.value)}

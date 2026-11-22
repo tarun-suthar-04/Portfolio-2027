@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { PORTFOLIO_PROFILE } from '../data/portfolio';
+import { usePortfolioData } from '../context/PortfolioDataContext';
 import {
   clampProgress,
   computeVelocity,
@@ -9,14 +9,8 @@ import {
   resolveSwipeOutcome,
   ViewMode,
 } from '../lib/splitPhysics';
+import { CreativeMosaicCanvas } from './CreativeMosaicCanvas';
 import { TechnicalAsciiCanvas } from './TechnicalAsciiCanvas';
-
-// Stepped frosted cube cluster for Creative Liquid Glass composition
-const LIQUID_CUBIC_PATTERN = [
-  1, 1, 2, 0,
-  1, 2, 1, 0,
-  2, 1, 1, 1,
-];
 
 interface LandingSplitProps {
   activeView: ViewMode;
@@ -36,6 +30,7 @@ interface DragState {
 }
 
 export const LandingSplit: React.FC<LandingSplitProps> = ({ activeView, onOpenView }) => {
+  const { profile } = usePortfolioData();
   const containerRef = useRef<HTMLElement | null>(null);
   const progressRef = useRef<number>(0.5);
   const lockRef = useRef<boolean>(false);
@@ -97,18 +92,19 @@ export const LandingSplit: React.FC<LandingSplitProps> = ({ activeView, onOpenVi
     window.clearTimeout(resetTimerRef.current);
     lockRef.current = true;
     const destProgress = target === 'tech' ? 1 : 0;
-    tweenProgress(destProgress, 240, easeInOutCubic, () => {
+    // Per DESIGN.md: winner fills screen 380ms ease-in-out, then cross-fade 450ms
+    tweenProgress(destProgress, 380, easeInOutCubic, () => {
       onOpenViewRef.current(target);
       resetTimerRef.current = window.setTimeout(() => {
         if (activeViewRef.current !== 'land') {
           setProgress(0.5);
           lockRef.current = false;
         }
-      }, 360);
+      }, 460);
     });
   };
 
-  // Reset split to center cleanly whenever returning to landing
+  // Reset split cleanly to center whenever returning to landing
   useEffect(() => {
     if (activeView === 'land') {
       window.clearTimeout(resetTimerRef.current);
@@ -149,7 +145,7 @@ export const LandingSplit: React.FC<LandingSplitProps> = ({ activeView, onOpenVi
       const delta = coord - drag.startCoord;
 
       if (!drag.moved) {
-        const threshold = drag.startedOnHandle ? 3 : drag.isVertical ? 12 : 10;
+        const threshold = drag.startedOnHandle ? 3 : drag.isVertical ? 10 : 8;
         const dx = Math.abs(ev.clientX - drag.startX);
         const dy = Math.abs(ev.clientY - drag.startY);
         const primaryDelta = drag.isVertical ? dy : dx;
@@ -210,7 +206,8 @@ export const LandingSplit: React.FC<LandingSplitProps> = ({ activeView, onOpenVi
       } else if (Math.abs(progressRef.current - 0.5) < 0.004) {
         setProgress(0.5);
       } else {
-        tweenProgress(0.5, 320, easeOutBack);
+        // Per DESIGN.md: spring back, 520ms ease-out-back
+        tweenProgress(0.5, 520, easeOutBack);
       }
     };
 
@@ -249,6 +246,13 @@ export const LandingSplit: React.FC<LandingSplitProps> = ({ activeView, onOpenVi
     const isVertical = window.matchMedia('(max-width: 800px)').matches;
     const target = ev.target as HTMLElement | null;
     const startedOnHandle = Boolean(target?.closest('.split-handle'));
+
+    // Per DESIGN.md Interaction spec:
+    // Mobile: touch anywhere (vertical-dominant); Desktop: drag the centre handle
+    if (!isVertical && !startedOnHandle) {
+      suppressClickRef.current = false;
+      return;
+    }
 
     const coord = isVertical ? ev.clientY : ev.clientX;
     suppressClickRef.current = false;
@@ -296,7 +300,7 @@ export const LandingSplit: React.FC<LandingSplitProps> = ({ activeView, onOpenVi
       inert={activeView !== 'land'}
       onPointerDown={handlePointerDown}
     >
-      {/* CREATIVE HALF — Liquid Glass Refractive Studio */}
+      {/* CREATIVE HALF — Liquid-Glass Mosaic (viewport-sized curtain anchored top-left) */}
       <button
         type="button"
         id="goC"
@@ -304,50 +308,29 @@ export const LandingSplit: React.FC<LandingSplitProps> = ({ activeView, onOpenVi
         aria-label="Open Creative Portfolio: AI Creative Artist"
         onClick={(ev) => handleHalfClick(ev, 'cre')}
       >
-        {/* Subtle studio vertical grid + fluted optical glass refraction + caustics */}
-        <div className="cre-liquid-backdrop" aria-hidden="true" />
-        <div className="cre-fluted-overlay" aria-hidden="true" />
-        <div className="cre-caustic-orb is-sapphire" aria-hidden="true" />
-        <div className="cre-caustic-orb is-coral" aria-hidden="true" />
+        <div className="land-curtain is-cre">
+          <CreativeMosaicCanvas isActive={activeView === 'land'} />
 
-        {/* Stepped frosted cubic glass corner tiles (desktop) */}
-        <div className="cre-liquid-cubes" aria-hidden="true">
-          {LIQUID_CUBIC_PATTERN.map((cell, idx) =>
-            cell > 0 ? (
-              <div
-                key={idx}
-                className={cell === 2 ? 'cre-liquid-cube is-lit' : 'cre-liquid-cube'}
-              />
-            ) : (
-              <div key={idx} />
-            )
-          )}
-        </div>
-
-        {/* Stacked translucent Liquid Glass optical lenses (desktop top-left focal sculpture) */}
-        <div className="cre-liquid-stack" aria-hidden="true">
-          <div className="cre-liquid-lens is-front" />
-          <div className="cre-liquid-lens is-mid" />
-          <div className="cre-liquid-lens is-back" />
-        </div>
-
-        <div className="half-inner">
-          <div className="cre-liquid-card">
-            <span className="half-kicker text-[#dbeafe]">
+          <div className="half-inner">
+            <span className="cre-hint-pill">
               <span className="split-mobile-only">↓ Swipe down</span>
-              <span className="split-desktop-only">Drag right →</span> · Creative
+              <span className="split-desktop-only">Drag right →</span>
+              <span aria-hidden="true">·</span>
+              <span>Creative</span>
             </span>
+
             <h2 className="half-title">
-              AI Creative <em className="cre-artist-glass-pill">Artist</em>
+              AI Creative <em className="cre-artist-italic">Artist</em>
             </h2>
+
             <p className="half-desc">
-              Ideas into visuals. Imagination into motion.
+              {profile.creativeHeadline} {profile.creativeSubline}
             </p>
           </div>
         </div>
       </button>
 
-      {/* TECHNICAL HALF — Full-Bleed Drifting ASCII Macrodata Canvas + Vignette */}
+      {/* TECHNICAL HALF — Ruled Technical Paper & Ink Macrodata Field (curtain anchored bottom-right) */}
       <button
         type="button"
         id="goT"
@@ -355,37 +338,47 @@ export const LandingSplit: React.FC<LandingSplitProps> = ({ activeView, onOpenVi
         aria-label="Open Technical Portfolio: Software Developer"
         onClick={(ev) => handleHalfClick(ev, 'tech')}
       >
-        {/* Vignette behind ASCII field */}
-        <div className="tech-vignette" aria-hidden="true" />
-        <div className="tech-margin-rule" aria-hidden="true" />
+        <div className="land-curtain is-tech">
+          {/* Ruled drafting paper + subtle warm signal-yellow wash behind the canvas */}
+          <div className="tbg" aria-hidden="true" />
 
-        {/* Full-bleed drifting ASCII field canvas */}
-        <TechnicalAsciiCanvas isActive={activeView === 'land'} />
+          {/* Full-bleed drifting & swelling macrodata digit field */}
+          <TechnicalAsciiCanvas isActive={activeView === 'land'} />
 
-        <div className="half-inner">
-          <div className="tech-poster-card">
-            <div className="tech-poster-top-bar" aria-hidden="true" />
+          <div className="half-inner">
+            <span className="tech-hint-pill">
+              <span className="split-mobile-only">↑ Swipe up</span>
+              <span className="split-desktop-only">← Drag left</span>
+              <span aria-hidden="true">·</span>
+              <span>Technical</span>
+            </span>
+
             <h2 className="half-title">Software Developer</h2>
+
             <p className="half-desc">
               Python · Java · SQL · Android. Practical, database-backed applications.
             </p>
-            <span className="half-kicker text-[#0f5c3f]">
-              <span className="split-mobile-only">↑ Swipe up</span>
-              <span className="split-desktop-only">← Drag left</span> · Technical
-            </span>
           </div>
         </div>
       </button>
 
-      <h1 className="split-name">
-        {PORTFOLIO_PROFILE.firstName}
+      {/* Dual-rendered Name clipped with clip-path driven by --p: deep navy on Creative, ink + yellow surname accent on Technical */}
+      <h1 className="split-name is-cre">
+        {profile.firstName}
         <br />
-        {PORTFOLIO_PROFILE.lastName}
+        {profile.lastName}
       </h1>
+      <div className="split-name is-tech" aria-hidden="true">
+        {profile.firstName}
+        <br />
+        <span className="split-name-tech-accent">{profile.lastName}</span>
+      </div>
 
-      <div className="split-badge">{PORTFOLIO_PROFILE.badge}</div>
+      {/* 1px difference-blended split seam */}
+      <div className="split-seam-line" aria-hidden="true" />
 
-      <div className="split-handle" aria-hidden="true">
+      {/* Widened hit target + 34px liquid-glass grip */}
+      <div className="split-handle" data-testid="split-handle" aria-hidden="true">
         <div className="split-handle-knob">
           <span className="split-mobile-only">↕</span>
           <span className="split-desktop-only">↔</span>

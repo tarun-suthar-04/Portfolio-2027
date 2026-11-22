@@ -1,0 +1,441 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global Safety Net — default-deny everything not explicitly granted
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ================= GLOBAL PRIMITIVES =================
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidEmail(val) {
+      return val is string &&
+        val.size() >= 5 &&
+        val.size() <= 120 &&
+        val.matches('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
+    }
+
+    function isValidContactHandle(val) {
+      return val is string &&
+        val.size() >= 4 &&
+        val.size() <= 120 &&
+        (isValidEmail(val) || val.matches('^@[a-zA-Z0-9_]{3,32}$'));
+    }
+
+    function isHttpsUrl(val) {
+      return val is string && val.size() >= 12 && val.size() <= 300 && val.matches('^https://.*$');
+    }
+
+    function isSafeImagePath(val) {
+      return val is string &&
+        val.size() >= 1 &&
+        val.size() <= 400 &&
+        !val.matches('.*\\.\\..*') &&
+        (
+          val.matches('^https://.*$') ||
+          val.matches('^/src/assets/images/[a-zA-Z0-9._\\-]+$') ||
+          val.matches('^/assets/[a-zA-Z0-9._/\\-]+$')
+        );
+    }
+
+    // Strictly allows HTTPS URL, local asset path, OR bounded raster WebP/JPEG/PNG base64 data URI (blocks SVG/HTML XSS)
+    function isSafeCreativeFeatureImage(val) {
+      return val is string && (
+        val == '' ||
+        isSafeImagePath(val) ||
+        (
+          val.size() >= 30 &&
+          val.size() <= 350000 &&
+          val.split(';base64,').size() == 2 &&
+          val.split(';base64,')[0] in ['data:image/webp', 'data:image/jpeg', 'data:image/png']
+        )
+      );
+    }
+
+    function isSafeGradient(val) {
+      return val is string &&
+        val.size() >= 10 &&
+        val.size() <= 160 &&
+        val.matches('^linear-gradient\\([a-zA-Z0-9,#%\\.\\s\\-]+\\)$');
+    }
+
+    // Bootstrapped owner identities (zero DB reads — safe in allow list & allow get/write)
+    function isBootstrapAdmin() {
+      return isVerifiedUser() &&
+        request.auth.token.email in [
+          'ahirwalshiwani9@gmail.com',
+          'cdstarun2004@gmail.com',
+          'cdstarun1837@gmail.com'
+        ];
+    }
+
+    // Active admin lookup from trusted /admins/{uid} collection (never rely on client claims)
+    function isRegisteredAdmin() {
+      return isVerifiedUser() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.active == true &&
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role in ['super_admin', 'admin'];
+    }
+
+    function isAdmin() {
+      return isBootstrapAdmin() || isRegisteredAdmin();
+    }
+
+    function isSuperAdmin() {
+      return isBootstrapAdmin() || (
+        isVerifiedUser() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.active == true &&
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'super_admin'
+      );
+    }
+
+    // ================= VALIDATION BLUEPRINTS =================
+
+    function isValidSiteConfig(data) {
+      return data.keys().hasAll([
+        'firstName', 'lastName', 'fullName', 'location', 'contactEmail',
+        'techRole', 'techBio', 'creativeRole', 'creativeHeadline',
+        'creativeSubline', 'creativeYears', 'linkedinUrl', 'githubUrl',
+        'instagramUrl', 'fiverrUrl', 'updatedBy', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'firstName', 'lastName', 'fullName', 'location', 'contactEmail',
+        'techRole', 'techBio', 'creativeRole', 'creativeHeadline',
+        'creativeSubline', 'creativeYears', 'linkedinUrl', 'githubUrl',
+        'instagramUrl', 'fiverrUrl', 'updatedBy', 'updatedAt'
+      ]) &&
+      data.firstName is string && data.firstName.size() >= 1 && data.firstName.size() <= 40 &&
+      data.lastName is string && data.lastName.size() >= 1 && data.lastName.size() <= 40 &&
+      data.fullName is string && data.fullName.size() >= 2 && data.fullName.size() <= 80 &&
+      data.location is string && data.location.size() >= 2 && data.location.size() <= 80 &&
+      isValidEmail(data.contactEmail) &&
+      data.techRole is string && data.techRole.size() >= 2 && data.techRole.size() <= 120 &&
+      data.techBio is string && data.techBio.size() >= 10 && data.techBio.size() <= 600 &&
+      data.creativeRole is string && data.creativeRole.size() >= 2 && data.creativeRole.size() <= 120 &&
+      data.creativeHeadline is string && data.creativeHeadline.size() >= 2 && data.creativeHeadline.size() <= 100 &&
+      data.creativeSubline is string && data.creativeSubline.size() >= 2 && data.creativeSubline.size() <= 120 &&
+      data.creativeYears is string && data.creativeYears.size() >= 4 && data.creativeYears.size() <= 24 &&
+      isHttpsUrl(data.linkedinUrl) &&
+      isHttpsUrl(data.githubUrl) &&
+      isHttpsUrl(data.instagramUrl) &&
+      isHttpsUrl(data.fiverrUrl) &&
+      isValidId(data.updatedBy) &&
+      data.updatedBy == request.auth.uid &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidProject(data) {
+      return data.keys().hasAll([
+        'title', 'fileName', 'fileExt', 'fileTypeLabel', 'fileAccent',
+        'platform', 'subtitle', 'summary', 'highlights', 'stack',
+        'demonstrates', 'previewImage', 'previewAlt', 'fallbackGradient',
+        'githubUrl', 'published', 'sortOrder', 'updatedBy', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'title', 'fileName', 'fileExt', 'fileTypeLabel', 'fileAccent',
+        'platform', 'subtitle', 'summary', 'highlights', 'stack',
+        'demonstrates', 'previewImage', 'previewAlt', 'fallbackGradient',
+        'githubUrl', 'liveUrl', 'published', 'sortOrder', 'updatedBy', 'createdAt', 'updatedAt'
+      ]) &&
+      data.title is string && data.title.size() >= 2 && data.title.size() <= 80 &&
+      data.fileName is string && data.fileName.size() >= 3 && data.fileName.size() <= 64 && data.fileName.matches('^[a-zA-Z0-9._\\-]+$') &&
+      data.fileExt is string && data.fileExt in ['.apk', '.jar', '.py'] &&
+      data.fileTypeLabel is string && data.fileTypeLabel.size() >= 2 && data.fileTypeLabel.size() <= 40 &&
+      data.fileAccent is string && data.fileAccent.size() >= 4 && data.fileAccent.size() <= 16 && data.fileAccent.matches('^#[0-9a-fA-F]{3,8}$') &&
+      data.platform is string && data.platform.size() >= 2 && data.platform.size() <= 80 &&
+      data.subtitle is string && data.subtitle.size() >= 2 && data.subtitle.size() <= 80 &&
+      data.summary is string && data.summary.size() >= 10 && data.summary.size() <= 500 &&
+      data.highlights is list && data.highlights.size() >= 1 && data.highlights.size() <= 8 &&
+      data.highlights[0] is string && data.highlights[0].size() >= 2 && data.highlights[0].size() <= 160 &&
+      data.stack is list && data.stack.size() >= 1 && data.stack.size() <= 12 &&
+      data.stack[0] is string && data.stack[0].size() >= 1 && data.stack[0].size() <= 40 &&
+      data.demonstrates is string && data.demonstrates.size() >= 2 && data.demonstrates.size() <= 160 &&
+      isSafeImagePath(data.previewImage) &&
+      data.previewAlt is string && data.previewAlt.size() >= 2 && data.previewAlt.size() <= 220 &&
+      isSafeGradient(data.fallbackGradient) &&
+      isHttpsUrl(data.githubUrl) &&
+      (!('liveUrl' in data) || data.liveUrl == '' || isHttpsUrl(data.liveUrl)) &&
+      data.published is bool &&
+      data.sortOrder is number && data.sortOrder >= 0 && data.sortOrder <= 9999 &&
+      isValidId(data.updatedBy) &&
+      data.updatedBy == request.auth.uid &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidCreativeWork(data) {
+      return data.keys().hasAll([
+        'index', 'title', 'handle', 'category', 'subtitle', 'shortDescription',
+        'masonrySize', 'theme', 'medium', 'year', 'brief', 'promptApproach',
+        'palette', 'published', 'sortOrder', 'updatedBy', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'index', 'title', 'handle', 'category', 'subtitle', 'shortDescription',
+        'masonrySize', 'theme', 'medium', 'year', 'brief', 'promptApproach',
+        'palette', 'featureImage', 'published', 'sortOrder', 'updatedBy', 'createdAt', 'updatedAt'
+      ]) &&
+      data.index is string && data.index.size() >= 1 && data.index.size() <= 6 &&
+      data.title is string && data.title.size() >= 2 && data.title.size() <= 60 &&
+      data.handle is string && data.handle.size() >= 2 && data.handle.size() <= 60 &&
+      data.category is string && data.category in ['Direction', 'Motion & Frame', 'Concept'] &&
+      data.subtitle is string && data.subtitle.size() >= 2 && data.subtitle.size() <= 100 &&
+      data.shortDescription is string && data.shortDescription.size() >= 10 && data.shortDescription.size() <= 320 &&
+      data.masonrySize is string && data.masonrySize in ['tall', 'medium', 'compact'] &&
+      data.theme is string && data.theme in ['sunset', 'emerald', 'violet', 'cobalt', 'amber', 'orchid'] &&
+      data.medium is string && data.medium.size() >= 2 && data.medium.size() <= 100 &&
+      data.year is string && data.year.size() >= 4 && data.year.size() <= 20 &&
+      data.brief is string && data.brief.size() >= 10 && data.brief.size() <= 420 &&
+      data.promptApproach is string && data.promptApproach.size() >= 10 && data.promptApproach.size() <= 420 &&
+      data.palette is list && data.palette.size() >= 3 && data.palette.size() <= 6 &&
+      data.palette[0] is string && data.palette[0].matches('^#[0-9a-fA-F]{3,8}$') &&
+      (!('featureImage' in data) || isSafeCreativeFeatureImage(data.featureImage)) &&
+      data.published is bool &&
+      data.sortOrder is number && data.sortOrder >= 0 && data.sortOrder <= 9999 &&
+      isValidId(data.updatedBy) &&
+      data.updatedBy == request.auth.uid &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidAdminUser(data, adminUid) {
+      return data.keys().hasAll([
+        'uid', 'email', 'displayName', 'role', 'active', 'addedBy', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'uid', 'email', 'displayName', 'role', 'active', 'addedBy', 'createdAt', 'updatedAt'
+      ]) &&
+      isValidId(data.uid) &&
+      data.uid == adminUid &&
+      isValidEmail(data.email) &&
+      data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80 &&
+      data.role is string && data.role in ['super_admin', 'admin'] &&
+      data.active is bool &&
+      isValidId(data.addedBy) &&
+      data.addedBy == request.auth.uid &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidAuditLog(data) {
+      return data.keys().hasAll([
+        'actorUid', 'actorEmail', 'action', 'resourceType', 'resourceId', 'summary', 'createdAt'
+      ]) &&
+      data.keys().hasOnly([
+        'actorUid', 'actorEmail', 'action', 'resourceType', 'resourceId', 'summary', 'createdAt'
+      ]) &&
+      isValidId(data.actorUid) &&
+      data.actorUid == request.auth.uid &&
+      isValidEmail(data.actorEmail) &&
+      data.actorEmail == request.auth.token.email &&
+      data.action is string && data.action in ['create', 'update', 'delete', 'seed', 'role_change', 'publish_toggle'] &&
+      data.resourceType is string && data.resourceType in ['site_config', 'projects', 'creative_works', 'admins', 'project_inquiries'] &&
+      isValidId(data.resourceId) &&
+      data.summary is string && data.summary.size() >= 3 && data.summary.size() <= 240 &&
+      data.createdAt is timestamp;
+    }
+
+    function isValidProjectInquiry(data) {
+      return data.keys().hasAll([
+        'name', 'contact', 'needs', 'budget', 'details', 'status', 'createdAt'
+      ]) &&
+      data.keys().hasOnly([
+        'name', 'contact', 'needs', 'budget', 'details', 'status', 'createdAt'
+      ]) &&
+      data.name is string && data.name.size() >= 2 && data.name.size() <= 80 &&
+      isValidContactHandle(data.contact) &&
+      data.needs is list && data.needs.size() <= 6 &&
+      data.needs.hasOnly([
+        'Landing page', 'Website', '3D / WebGL', 'Game / playable', 'Animation', 'Other'
+      ]) &&
+      data.budget is string && data.budget.size() <= 20 &&
+      data.budget in ['', 'under $1k', '$1–3k', '$3–7k', '$7k+', 'Not sure yet'] &&
+      data.details is string && data.details.size() >= 10 && data.details.size() <= 2000 &&
+      data.status is string && data.status in ['new', 'reviewed', 'archived'] &&
+      data.createdAt is timestamp;
+    }
+
+    // ================= COLLECTION RULES =================
+
+    // Public portfolio profile configuration (single document: /site_config/profile)
+    match /site_config/{configId} {
+      allow get: if isValidId(configId) && configId == 'profile';
+      allow list: if false;
+      allow create: if isVerifiedUser() &&
+        isValidId(configId) &&
+        configId == 'profile' &&
+        isValidSiteConfig(incoming()) &&
+        incoming().updatedAt == request.time &&
+        isAdmin();
+      allow update: if isVerifiedUser() &&
+        isValidId(configId) &&
+        configId == 'profile' &&
+        isValidSiteConfig(incoming()) &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'firstName', 'lastName', 'fullName', 'location', 'contactEmail',
+          'techRole', 'techBio', 'creativeRole', 'creativeHeadline',
+          'creativeSubline', 'creativeYears', 'linkedinUrl', 'githubUrl',
+          'instagramUrl', 'fiverrUrl', 'updatedBy', 'updatedAt'
+        ]) &&
+        isAdmin();
+      allow delete: if false;
+    }
+
+    // Technical portfolio projects
+    match /projects/{projectId} {
+      allow get: if isValidId(projectId) && (
+        existing().published == true || isAdmin()
+      );
+      // Zero get()/exists() in allow list: public sees published items; bootstrap admin or author sees drafts
+      allow list: if existing().published == true ||
+        isBootstrapAdmin() ||
+        (isVerifiedUser() && existing().updatedBy == request.auth.uid);
+      allow create: if isVerifiedUser() &&
+        isValidId(projectId) &&
+        isValidProject(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isAdmin();
+      allow update: if isVerifiedUser() &&
+        isValidId(projectId) &&
+        isValidProject(incoming()) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          // Action 1: Full project edit by admin
+          (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly([
+            'title', 'fileName', 'fileExt', 'fileTypeLabel', 'fileAccent',
+            'platform', 'subtitle', 'summary', 'highlights', 'stack',
+            'demonstrates', 'previewImage', 'previewAlt', 'fallbackGradient',
+            'githubUrl', 'liveUrl', 'published', 'sortOrder', 'updatedBy', 'updatedAt'
+          ])) ||
+          // Action 2: Publish visibility toggle by admin
+          (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly([
+            'published', 'updatedBy', 'updatedAt'
+          ]))
+        );
+      allow delete: if isVerifiedUser() && isValidId(projectId) && isAdmin();
+    }
+
+    // Creative portfolio works
+    match /creative_works/{workId} {
+      allow get: if isValidId(workId) && (
+        existing().published == true || isAdmin()
+      );
+      allow list: if existing().published == true ||
+        isBootstrapAdmin() ||
+        (isVerifiedUser() && existing().updatedBy == request.auth.uid);
+      allow create: if isVerifiedUser() &&
+        isValidId(workId) &&
+        isValidCreativeWork(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isAdmin();
+      allow update: if isVerifiedUser() &&
+        isValidId(workId) &&
+        isValidCreativeWork(incoming()) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          // Action 1: Full visual work edit by admin
+          (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly([
+            'index', 'title', 'handle', 'category', 'subtitle', 'shortDescription',
+            'masonrySize', 'theme', 'medium', 'year', 'brief', 'promptApproach',
+            'palette', 'featureImage', 'published', 'sortOrder', 'updatedBy', 'updatedAt'
+          ])) ||
+          // Action 2: Publish visibility toggle by admin
+          (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly([
+            'published', 'updatedBy', 'updatedAt'
+          ]))
+        );
+      allow delete: if isVerifiedUser() && isValidId(workId) && isAdmin();
+    }
+
+    // Private RBAC admin roster (PII isolated — strictly super-admin managed, self-check get allowed)
+    match /admins/{adminUid} {
+      allow get: if isVerifiedUser() && isValidId(adminUid) && (
+        adminUid == request.auth.uid || isAdmin()
+      );
+      allow list: if isBootstrapAdmin() ||
+        (isVerifiedUser() && existing().uid == request.auth.uid);
+      allow create: if isVerifiedUser() &&
+        isValidId(adminUid) &&
+        isValidAdminUser(incoming(), adminUid) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isSuperAdmin();
+      allow update: if isVerifiedUser() &&
+        isValidId(adminUid) &&
+        isValidAdminUser(incoming(), adminUid) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        !(adminUid == request.auth.uid && (incoming().active == false || incoming().role != 'super_admin')) &&
+        (
+          // Action: Super-admin role/status update
+          isSuperAdmin() && incoming().diff(existing()).affectedKeys().hasOnly([
+            'displayName', 'email', 'role', 'active', 'addedBy', 'updatedAt'
+          ])
+        );
+      allow delete: if isVerifiedUser() &&
+        isValidId(adminUid) &&
+        adminUid != request.auth.uid &&
+        isSuperAdmin();
+    }
+
+    // Private, immutable append-only security audit log
+    match /audit_logs/{logId} {
+      allow get: if isVerifiedUser() && isValidId(logId) && isAdmin();
+      allow list: if isBootstrapAdmin() ||
+        (isVerifiedUser() && existing().actorUid == request.auth.uid);
+      allow create: if isVerifiedUser() &&
+        isValidId(logId) &&
+        isValidAuditLog(incoming()) &&
+        incoming().createdAt == request.time &&
+        isAdmin();
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // Project contact inquiries (publicly creatable with strict validation; PII strictly admin-only for read/manage)
+    match /project_inquiries/{inquiryId} {
+      allow get: if isVerifiedUser() && isValidId(inquiryId) && isAdmin();
+      allow list: if isBootstrapAdmin();
+      allow create: if isValidId(inquiryId) &&
+        isValidProjectInquiry(incoming()) &&
+        incoming().status == 'new' &&
+        incoming().createdAt == request.time;
+      allow update: if isVerifiedUser() &&
+        isValidId(inquiryId) &&
+        isValidProjectInquiry(incoming()) &&
+        incoming().createdAt == existing().createdAt &&
+        (
+          // Action: Admin inquiry triage status update
+          isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['status'])
+        );
+      allow delete: if isVerifiedUser() && isValidId(inquiryId) && isAdmin();
+    }
+  }
+}

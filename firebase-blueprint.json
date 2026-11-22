@@ -1,0 +1,240 @@
+{
+  "entities": {
+    "SiteConfig": {
+      "title": "SiteConfig",
+      "description": "Public portfolio profile, headlines, contact email, and external platform URLs managed exclusively by verified admins.",
+      "type": "object",
+      "properties": {
+        "firstName": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "lastName": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "fullName": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "location": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "contactEmail": { "type": "string", "format": "email", "minLength": 5, "maxLength": 120 },
+        "techRole": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "techBio": { "type": "string", "minLength": 10, "maxLength": 600 },
+        "creativeRole": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "creativeHeadline": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "creativeSubline": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "creativeYears": { "type": "string", "minLength": 4, "maxLength": 24 },
+        "linkedinUrl": { "type": "string", "maxLength": 300, "pattern": "^https://.*$" },
+        "githubUrl": { "type": "string", "maxLength": 300, "pattern": "^https://.*$" },
+        "instagramUrl": { "type": "string", "maxLength": 300, "pattern": "^https://.*$" },
+        "fiverrUrl": { "type": "string", "maxLength": 300, "pattern": "^https://.*$" },
+        "updatedBy": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "firstName",
+        "lastName",
+        "fullName",
+        "location",
+        "contactEmail",
+        "techRole",
+        "techBio",
+        "creativeRole",
+        "creativeHeadline",
+        "creativeSubline",
+        "creativeYears",
+        "linkedinUrl",
+        "githubUrl",
+        "instagramUrl",
+        "fiverrUrl",
+        "updatedBy",
+        "updatedAt"
+      ]
+    },
+    "TechnicalProject": {
+      "title": "TechnicalProject",
+      "description": "File-based technical engineering project displayed on the Technical portfolio.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "fileName": { "type": "string", "minLength": 3, "maxLength": 64, "pattern": "^[a-zA-Z0-9._\\-]+$" },
+        "fileExt": { "type": "string", "enum": [".apk", ".jar", ".py"] },
+        "fileTypeLabel": { "type": "string", "minLength": 2, "maxLength": 40 },
+        "fileAccent": { "type": "string", "minLength": 4, "maxLength": 16, "pattern": "^#[0-9a-fA-F]{3,8}$" },
+        "platform": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "subtitle": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "summary": { "type": "string", "minLength": 10, "maxLength": 500 },
+        "highlights": { "type": "array", "description": "Up to 8 concise bullet highlights" },
+        "stack": { "type": "array", "description": "Up to 12 stack labels" },
+        "demonstrates": { "type": "string", "minLength": 2, "maxLength": 160 },
+        "previewImage": { "type": "string", "minLength": 1, "maxLength": 400 },
+        "previewAlt": { "type": "string", "minLength": 2, "maxLength": 220 },
+        "fallbackGradient": { "type": "string", "minLength": 10, "maxLength": 160 },
+        "githubUrl": { "type": "string", "minLength": 12, "maxLength": 300, "pattern": "^https://.*$" },
+        "liveUrl": { "type": "string", "maxLength": 300 },
+        "published": { "type": "boolean" },
+        "sortOrder": { "type": "number" },
+        "updatedBy": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "title",
+        "fileName",
+        "fileExt",
+        "fileTypeLabel",
+        "fileAccent",
+        "platform",
+        "subtitle",
+        "summary",
+        "highlights",
+        "stack",
+        "demonstrates",
+        "previewImage",
+        "previewAlt",
+        "fallbackGradient",
+        "githubUrl",
+        "published",
+        "sortOrder",
+        "updatedBy",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "CreativeWork": {
+      "title": "CreativeWork",
+      "description": "Visual study / creative project item displayed in the My Visual Works gallery.",
+      "type": "object",
+      "properties": {
+        "index": { "type": "string", "minLength": 1, "maxLength": 6 },
+        "title": { "type": "string", "minLength": 2, "maxLength": 60 },
+        "handle": { "type": "string", "minLength": 2, "maxLength": 60 },
+        "category": { "type": "string", "enum": ["Direction", "Motion & Frame", "Concept"] },
+        "subtitle": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "shortDescription": { "type": "string", "minLength": 10, "maxLength": 320 },
+        "masonrySize": { "type": "string", "enum": ["tall", "medium", "compact"] },
+        "theme": { "type": "string", "enum": ["sunset", "emerald", "violet", "cobalt", "amber", "orchid"] },
+        "medium": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "year": { "type": "string", "minLength": 4, "maxLength": 20 },
+        "brief": { "type": "string", "minLength": 10, "maxLength": 420 },
+        "promptApproach": { "type": "string", "minLength": 10, "maxLength": 420 },
+        "palette": { "type": "array", "description": "3 to 6 hex swatch colors" },
+        "featureImage": { "type": "string", "maxLength": 350000, "description": "Optional uploaded raster feature image (compressed WebP/JPEG/PNG data URI) or HTTPS image URL" },
+        "published": { "type": "boolean" },
+        "sortOrder": { "type": "number" },
+        "updatedBy": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "index",
+        "title",
+        "handle",
+        "category",
+        "subtitle",
+        "shortDescription",
+        "masonrySize",
+        "theme",
+        "medium",
+        "year",
+        "brief",
+        "promptApproach",
+        "palette",
+        "published",
+        "sortOrder",
+        "updatedBy",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Authorized portfolio administrator record for database-enforced RBAC. Strictly private (PII isolated).",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 6, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "format": "email", "minLength": 5, "maxLength": 120 },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "role": { "type": "string", "enum": ["super_admin", "admin"] },
+        "active": { "type": "boolean" },
+        "addedBy": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "uid",
+        "email",
+        "displayName",
+        "role",
+        "active",
+        "addedBy",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Append-only immutable administrative audit event.",
+      "type": "object",
+      "properties": {
+        "actorUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "actorEmail": { "type": "string", "format": "email", "minLength": 5, "maxLength": 120 },
+        "action": { "type": "string", "enum": ["create", "update", "delete", "seed", "role_change", "publish_toggle"] },
+        "resourceType": { "type": "string", "enum": ["site_config", "projects", "creative_works", "admins"] },
+        "resourceId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "summary": { "type": "string", "minLength": 3, "maxLength": 240 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "actorUid",
+        "actorEmail",
+        "action",
+        "resourceType",
+        "resourceId",
+        "summary",
+        "createdAt"
+      ]
+    },
+    "ProjectInquiry": {
+      "title": "ProjectInquiry",
+      "description": "Visitor-submitted project inquiry from the Start a project contact form. Publicly creatable with strict schema validation; reads and management strictly restricted to verified admins (PII isolated).",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "contact": { "type": "string", "minLength": 4, "maxLength": 120 },
+        "needs": { "type": "array", "description": "0 to 6 selected project scope options" },
+        "budget": { "type": "string", "enum": ["", "under $1k", "$1–3k", "$3–7k", "$7k+", "Not sure yet"], "maxLength": 20 },
+        "details": { "type": "string", "minLength": 10, "maxLength": 2000 },
+        "status": { "type": "string", "enum": ["new", "reviewed", "archived"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "name",
+        "contact",
+        "needs",
+        "budget",
+        "details",
+        "status",
+        "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/site_config/{configId}": {
+      "schema": { "$ref": "#/entities/SiteConfig" },
+      "description": "Publicly readable portfolio profile settings; writes strictly restricted to verified admins."
+    },
+    "/projects/{projectId}": {
+      "schema": { "$ref": "#/entities/TechnicalProject" },
+      "description": "Technical portfolio projects; published entries are public, drafts and all writes require verified admin."
+    },
+    "/creative_works/{workId}": {
+      "schema": { "$ref": "#/entities/CreativeWork" },
+      "description": "Creative visual works; published entries are public, drafts and all writes require verified admin."
+    },
+    "/admins/{adminUid}": {
+      "schema": { "$ref": "#/entities/AdminUser" },
+      "description": "Private RBAC admin roster containing admin PII; restricted to verified admins and self-check get."
+    },
+    "/audit_logs/{logId}": {
+      "schema": { "$ref": "#/entities/AuditLog" },
+      "description": "Private, immutable append-only audit log of administrative actions."
+    },
+    "/project_inquiries/{inquiryId}": {
+      "schema": { "$ref": "#/entities/ProjectInquiry" },
+      "description": "Private visitor project inquiries submitted via the Start a project contact form; publicly creatable with strict validation, readable/manageable exclusively by verified admins."
+    }
+  }
+}

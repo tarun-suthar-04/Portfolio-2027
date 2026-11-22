@@ -1,17 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowUpRight, Bookmark, Check, Copy } from 'lucide-react';
+import { ArrowUpRight, Check, Copy, Lock, Mail } from 'lucide-react';
 import {
   CREATIVE_TOOLKIT,
-  CREATIVE_WORKS,
   CreativeCategory,
   MANIFESTO_WORD_MEDIA,
   ManifestoWordKey,
-  PORTFOLIO_PROFILE,
   PROCESS_STEPS,
 } from '../data/portfolio';
+import { usePortfolioData } from '../context/PortfolioDataContext';
 import { calculatePullProgress, SPLIT_CONFIG, ViewMode } from '../lib/splitPhysics';
 import { calculateMagneticOffset, clampFloatingPreview } from '../lib/magneticCard';
 import { CreativeLightbox } from './CreativeLightbox';
+import { CreativeToolLogo, PlatformBrandLogo } from './CreativeBrandLogos';
 import { CubicMatrixCluster, GlassCardOrb } from './CubicGlassGrid';
 import { ProcessPreviewArt } from './CreativeArtwork';
 
@@ -19,6 +19,7 @@ interface CreativeViewProps {
   activeView: ViewMode;
   onReturnLanding: () => void;
   onSwitchTechnical: () => void;
+  onOpenAdmin: () => void;
 }
 
 // 5x5 vibrant lime-emerald cubic block (Image 1 & Image 3 style)
@@ -52,7 +53,9 @@ export const CreativeView: React.FC<CreativeViewProps> = ({
   activeView,
   onReturnLanding,
   onSwitchTechnical,
+  onOpenAdmin,
 }) => {
+  const { profile, platformLinks, creativeWorks } = usePortfolioData();
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const accRef = useRef<number>(0);
   const touchYRef = useRef<number>(0);
@@ -68,6 +71,7 @@ export const CreativeView: React.FC<CreativeViewProps> = ({
   const [hoveredWord, setHoveredWord] = useState<ManifestoWordKey | null>(null);
   const [pinnedWord, setPinnedWord] = useState<ManifestoWordKey | null>(null);
   const [failedWordImages, setFailedWordImages] = useState<Record<string, boolean>>({});
+  const [failedWorkImages, setFailedWorkImages] = useState<Record<string, boolean>>({});
 
   // Reset scroll to top on entry
   useEffect(() => {
@@ -177,12 +181,20 @@ export const CreativeView: React.FC<CreativeViewProps> = ({
 
   const handleCopyEmail = async () => {
     try {
-      await navigator.clipboard.writeText(PORTFOLIO_PROFILE.email);
+      await navigator.clipboard.writeText(profile.contactEmail);
       setCopiedEmail(true);
       window.setTimeout(() => setCopiedEmail(false), 2200);
     } catch {
-      window.location.href = `mailto:${PORTFOLIO_PROFILE.email}`;
+      window.location.href = `mailto:${profile.contactEmail}`;
     }
+  };
+
+  const scrollToSection = (ev: React.MouseEvent<HTMLAnchorElement>, sectionId: string) => {
+    ev.preventDefault();
+    const target = document.getElementById(sectionId);
+    if (!target) return;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    target.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
   };
 
   const resetCardMagnetic = (el: HTMLButtonElement) => {
@@ -267,8 +279,8 @@ export const CreativeView: React.FC<CreativeViewProps> = ({
 
   const filteredWorks =
     selectedCategory === 'All'
-      ? CREATIVE_WORKS
-      : CREATIVE_WORKS.filter((item) => item.category === selectedCategory);
+      ? creativeWorks
+      : creativeWorks.filter((item) => item.category === selectedCategory);
 
   const activeStep = PROCESS_STEPS[activeStepIndex] ?? PROCESS_STEPS[0];
   const activeTool =
@@ -305,26 +317,71 @@ export const CreativeView: React.FC<CreativeViewProps> = ({
         </button>
       </nav>
 
-      {/* SECTION 1: Studio Grid Editorial Hero (Images 1 & 4 inspired) */}
-      <section className="studio-vertical-grid relative overflow-hidden border-b border-[#141518]/10 px-5 sm:px-10 lg:px-16 pt-8 pb-20 lg:pb-24">
+      {/* SECTION 1: Studio Grid Editorial Hero */}
+      <section className="studio-vertical-grid relative overflow-hidden border-b border-[#141518]/10 px-5 sm:px-10 lg:px-16 pt-7 pb-20 lg:pb-24">
         <div className="max-w-6xl mx-auto">
-          {/* Clean 3-zone Editorial Header Strip */}
-          <header className="cre-rv on flex flex-wrap items-center justify-between gap-4 pb-10 border-b border-[#141518]/10 text-xs text-[#4b5563]">
-            <span className="font-semibold text-[#141518] tracking-tight">
-              {PORTFOLIO_PROFILE.firstName}{' '}
-              <em className="font-serif-editorial italic font-normal text-[1.18em]">
-                {PORTFOLIO_PROFILE.lastName}
+          {/* Clean 3-Zone Production Navbar */}
+          <header className="cre-rv on flex items-center justify-between gap-6 pb-8 border-b border-[#141518]/10">
+            <a
+              href="#creative-work"
+              onClick={(ev) => scrollToSection(ev, 'creative-work')}
+              className="text-[17px] sm:text-[19px] font-semibold text-[#141518] tracking-tight no-underline whitespace-nowrap shrink-0"
+            >
+              {profile.firstName}{' '}
+              <em className="font-serif-editorial italic font-normal text-[1.16em]">
+                {profile.lastName}
               </em>
-            </span>
-            <span>AI Creative Artist · Visual Content Creator</span>
-            <span className="font-mono-tech">{PORTFOLIO_PROFILE.creative.years}</span>
+            </a>
+
+            <nav
+              aria-label="Creative sections"
+              className="hidden md:flex items-center gap-7 text-[15px] font-medium text-[#374151]"
+            >
+              <a
+                href="#creative-work"
+                onClick={(ev) => scrollToSection(ev, 'creative-work')}
+                className="text-[#374151] hover:text-[#141518] no-underline transition-colors whitespace-nowrap shrink-0"
+              >
+                Works
+              </a>
+              <a
+                href="#creative-process"
+                onClick={(ev) => scrollToSection(ev, 'creative-process')}
+                className="text-[#374151] hover:text-[#141518] no-underline transition-colors whitespace-nowrap shrink-0"
+              >
+                Process
+              </a>
+              <a
+                href="#creative-toolkit"
+                onClick={(ev) => scrollToSection(ev, 'creative-toolkit')}
+                className="text-[#374151] hover:text-[#141518] no-underline transition-colors whitespace-nowrap shrink-0"
+              >
+                Toolkit
+              </a>
+              <a
+                href="#creative-contact"
+                onClick={(ev) => scrollToSection(ev, 'creative-contact')}
+                className="text-[#374151] hover:text-[#141518] no-underline transition-colors whitespace-nowrap shrink-0"
+              >
+                Contact
+              </a>
+            </nav>
+
+            <a
+              href="#creative-contact"
+              onClick={(ev) => scrollToSection(ev, 'creative-contact')}
+              className="inline-flex items-center gap-1.5 text-[14.5px] sm:text-[15px] font-semibold text-[#141518] hover:text-[#2563eb] no-underline transition-colors whitespace-nowrap shrink-0"
+            >
+              <span>Let&apos;s Talk</span>
+              <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
+            </a>
           </header>
 
-          {/* Hero Split: Oversized Editorial Type + Stepped Cubic Emerald/Cobalt Glass */}
+          {/* Hero Split: Oversized Editorial Type + Stepped Cubic Emerald Glass */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center pt-12 lg:pt-16">
             <div className="lg:col-span-7">
-              <p className="cre-rv on text-xs font-medium tracking-[0.04em] text-[#2563eb] m-0">
-                Visual Storytelling · Light &amp; Motion
+              <p className="cre-rv on text-sm font-medium tracking-[0.02em] text-[#2563eb] m-0">
+                AI Creative Artist · Visual Storytelling
               </p>
 
               <h1 className="cre-rv on mt-4 text-[clamp(48px,7.5vw,92px)] leading-[0.94] tracking-[-0.055em] font-semibold text-[#141518] m-0 text-balance">
@@ -337,48 +394,46 @@ export const CreativeView: React.FC<CreativeViewProps> = ({
                 <span className="text-[#16a34a]">motion.</span>
               </h1>
 
-              {/* Tilted clean handle callout inspired by Image 4 */}
-              <div className="cre-rv on mt-6 inline-block -rotate-2 bg-white px-4 py-1.5 rounded-full border border-[#141518]/10 shadow-[0_10px_28px_rgba(37,99,235,0.12)]">
-                <span className="text-xs font-semibold text-[#2563eb]">
-                  @tarunsuthar
-                </span>
-                <span className="mx-2 text-[#9ca3af]">·</span>
-                <span className="text-xs text-[#4b5563]">Indore, India</span>
+              {/* Clean signature metadata line */}
+              <div className="cre-rv on mt-6 flex flex-wrap items-center gap-2.5 text-sm text-[#4b5563]">
+                <span className="font-semibold text-[#2563eb]">@tarunsuthar</span>
+                <span aria-hidden="true">·</span>
+                <span>{profile.location}</span>
+                <span aria-hidden="true">·</span>
+                <span>{profile.creativeYears}</span>
               </div>
 
-              {/* Two-tone contrast sublead (Image 4 style) */}
-              <p className="cre-rv on mt-8 text-[clamp(20px,2.4vw,26px)] leading-[1.3] tracking-[-0.03em] font-medium text-[#141518] max-w-md m-0">
+              {/* Two-tone contrast sublead */}
+              <p className="cre-rv on mt-7 text-[clamp(20px,2.4vw,26px)] leading-[1.3] tracking-[-0.03em] font-medium text-[#141518] max-w-md m-0">
                 It isn&apos;t just raw prompts.{' '}
-                <span className="text-[#7c828d]">
+                <span className="text-[#6b7280]">
                   It&apos;s lighting, composition &amp; narrative intent.
                 </span>
               </p>
 
-              <div className="cre-rv on mt-8 flex flex-wrap items-center gap-6 text-xs font-semibold tracking-[0.04em] text-[#141518]">
+              <div className="cre-rv on mt-8 flex flex-wrap items-center gap-6 text-sm font-semibold text-[#141518]">
                 <a
                   href="#creative-work"
+                  onClick={(ev) => scrollToSection(ev, 'creative-work')}
                   className="inline-flex items-center gap-1.5 text-[#141518] no-underline border-b border-[#141518] pb-0.5 hover:text-[#2563eb] hover:border-[#2563eb] transition-colors"
                 >
-                  <span>Explore Visual Studies</span>
-                  <ArrowUpRight className="w-3.5 h-3.5" aria-hidden="true" />
+                  <span>Explore My Works</span>
+                  <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
                 </a>
                 <a
                   href="#creative-process"
+                  onClick={(ev) => scrollToSection(ev, 'creative-process')}
                   className="inline-flex items-center gap-1.5 text-[#4b5563] no-underline hover:text-[#141518] transition-colors"
                 >
-                  <span>5-Step Workflow</span>
+                  <span>Creative Process</span>
                 </a>
               </div>
             </div>
 
-            {/* Right: Beveled 5x5 Lime-Emerald Cubic Pillow Cluster (Image 1 style) */}
+            {/* Right: Beveled 5x5 Lime-Emerald Cubic Pillow Cluster */}
             <div className="lg:col-span-5 flex flex-col items-center lg:items-end justify-center">
               <div className="w-full max-w-[330px] sm:max-w-[360px]">
                 <CubicMatrixCluster variant="emerald" pattern={HERO_EMERALD_MATRIX} />
-                <div className="mt-4 flex items-center justify-between text-[11px] font-mono-tech text-[#6b7280]">
-                  <span>CUBIC GLASS STUDY · 01</span>
-                  <span>25 REFRACTIVE TILES</span>
-                </div>
               </div>
             </div>
           </div>
@@ -447,11 +502,7 @@ export const CreativeView: React.FC<CreativeViewProps> = ({
         </div>
 
         <div className="relative z-10 max-w-4xl mx-auto text-center">
-          <p className="cre-rv text-xs font-medium text-[#d6c7b8] tracking-[0.06em] m-0">
-            Manifesto · Visual Philosophy
-          </p>
-
-          <h2 className="cre-rv mt-6 font-serif-editorial font-normal text-[clamp(40px,6.8vw,86px)] leading-[1.02] tracking-[-0.02em] text-[#f5ede1] m-0 text-balance">
+          <h2 className="cre-rv font-serif-editorial font-normal text-[clamp(40px,6.8vw,86px)] leading-[1.04] tracking-[-0.02em] text-[#f5ede1] m-0 text-balance">
             I {renderManifestoWord('create')} visuals, I {renderManifestoWord('experiment')} with{' '}
             {renderManifestoWord('ideas')}, and I bring {renderManifestoWord('imagination')} to{' '}
             {renderManifestoWord('life')}.
@@ -487,18 +538,10 @@ export const CreativeView: React.FC<CreativeViewProps> = ({
               </div>
             </div>
           )}
-
-          <div className="cre-rv mt-9 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-[#b8a99a] font-mono-tech">
-            <span>(01) CONCEPTUAL FRAMING</span>
-            <span aria-hidden="true">·</span>
-            <span>(02) STRUCTURED LIGHTING</span>
-            <span aria-hidden="true">·</span>
-            <span>(03) EDITORIAL FINISH</span>
-          </div>
         </div>
       </section>
 
-      {/* SECTION 3: Sleek Glass Gradient Cards Gallery (Image 2 exact aesthetic) */}
+      {/* SECTION 3: My Visual Works Gallery */}
       <section
         id="creative-work"
         className="bg-[#1b1c20] text-white px-5 sm:px-10 lg:px-16 py-20 lg:py-28"
@@ -506,13 +549,10 @@ export const CreativeView: React.FC<CreativeViewProps> = ({
         <div className="max-w-6xl mx-auto">
           <div className="cre-rv flex flex-col md:flex-row md:items-end justify-between gap-6 pb-10 border-b border-white/10">
             <div>
-              <p className="font-mono-tech text-[11px] uppercase tracking-[0.14em] text-[#9ca3af] m-0">
-                Selected Work · Card Studies
-              </p>
-              <h2 className="mt-2 text-3xl md:text-5xl font-semibold tracking-[-0.04em] text-white m-0">
-                Visual Studies{' '}
+              <h2 className="text-3xl md:text-5xl font-semibold tracking-[-0.04em] text-white m-0">
+                My Visual{' '}
                 <span className="font-serif-editorial italic font-normal text-[#93c5fd]">
-                  &amp; Direction
+                  Works
                 </span>
               </h2>
             </div>
@@ -521,7 +561,7 @@ export const CreativeView: React.FC<CreativeViewProps> = ({
             <div
               className="flex flex-wrap items-center gap-1.5 bg-white/5 p-1.5 rounded-xl border border-white/10"
               role="group"
-              aria-label="Filter visual studies by category"
+              aria-label="Filter visual works by category"
             >
               {(['All', 'Direction', 'Motion & Frame', 'Concept'] as const).map((cat) => {
                 const active = selectedCategory === cat;
@@ -531,7 +571,7 @@ export const CreativeView: React.FC<CreativeViewProps> = ({
                     type="button"
                     aria-pressed={active}
                     onClick={() => setSelectedCategory(cat)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors whitespace-nowrap ${
+                    className={`px-3.5 py-2 rounded-lg text-xs font-medium cursor-pointer transition-colors whitespace-nowrap ${
                       active
                         ? 'bg-white text-[#141518]'
                         : 'text-[#d1d5db] hover:text-white hover:bg-white/5'
@@ -547,7 +587,7 @@ export const CreativeView: React.FC<CreativeViewProps> = ({
           {/* Masonry-Style Glassmorphic Gallery */}
           <div className="mt-10 columns-1 md:columns-2 lg:columns-3 gap-7">
             {filteredWorks.map((work) => {
-              const globalIndex = CREATIVE_WORKS.findIndex((item) => item.id === work.id);
+              const globalIndex = creativeWorks.findIndex((item) => item.id === work.id);
               const orbHeightClass =
                 work.masonrySize === 'tall'
                   ? 'h-[260px]'
@@ -565,39 +605,52 @@ export const CreativeView: React.FC<CreativeViewProps> = ({
                   }}
                   onPointerMove={handleCardPointerMove}
                   onPointerLeave={(ev) => resetCardMagnetic(ev.currentTarget)}
-                  aria-label={`Inspect ${work.title} visual study`}
-                  className="sleek-glass-card break-inside-avoid mb-7 w-full text-left flex flex-col justify-between cursor-pointer p-0 border-0"
+                  aria-label={`Open ${work.title}`}
+                  className="group sleek-glass-card break-inside-avoid mb-7 w-full text-left flex flex-col justify-between cursor-pointer p-0 border-0"
                 >
                   <div className="relative z-10 p-6 pb-3 w-full bg-white/85 backdrop-blur-md">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-[19px] font-bold tracking-[-0.03em] text-[#141518]">
                         {work.title}
                       </span>
-                      <span className="inline-flex items-center gap-1.5 font-mono-tech text-[11px] text-[#6b7280] shrink-0">
+                      <span className="inline-flex items-center gap-1 font-mono-tech text-[11px] text-[#6b7280] shrink-0">
                         <span>{work.index}</span>
-                        <Bookmark className="w-3.5 h-3.5 text-[#9ca3af]" aria-hidden="true" />
+                        <ArrowUpRight className="w-3.5 h-3.5 text-[#9ca3af]" aria-hidden="true" />
                       </span>
                     </div>
-                    <div className="mt-0.5 text-xs text-[#6b7280]">{work.handle}</div>
+                    <div className="mt-0.5 text-xs text-[#6b7280]">{work.category}</div>
                     <p className="mt-2.5 text-[13.5px] text-[#374151] leading-relaxed m-0">
                       {work.shortDescription}
                     </p>
                   </div>
 
-                  <GlassCardOrb theme={work.theme} className={`w-full ${orbHeightClass}`} />
+                  {work.featureImage && !failedWorkImages[`${work.id}:${work.featureImage}`] ? (
+                    <div className={`relative w-full ${orbHeightClass} overflow-hidden bg-[#141518]`}>
+                      <img
+                        src={work.featureImage}
+                        alt={`${work.title} — ${work.subtitle}`}
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                        onError={() =>
+                          setFailedWorkImages((prev) => ({
+                            ...prev,
+                            [`${work.id}:${work.featureImage}`]: true,
+                          }))
+                        }
+                        className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+                      />
+                    </div>
+                  ) : (
+                    <GlassCardOrb theme={work.theme} className={`w-full ${orbHeightClass}`} />
+                  )}
                 </button>
               );
             })}
           </div>
-
-          <div className="mt-4 flex items-center justify-between text-xs text-[#9ca3af]">
-            <span>@tarunsuthar · {filteredWorks.length} AI visual projects</span>
-            <span>Click any card to inspect direction notes &amp; palette</span>
-          </div>
         </div>
       </section>
 
-      {/* SECTION 4: Interactive Process Workflow over Orchid-Violet Cubic Grid (Image 5 inspired) */}
+      {/* SECTION 4: Interactive Process Workflow */}
       <section
         id="creative-process"
         className="studio-vertical-grid relative overflow-hidden border-b border-[#141518]/10 px-5 sm:px-10 lg:px-16 py-20 lg:py-28"
@@ -612,17 +665,13 @@ export const CreativeView: React.FC<CreativeViewProps> = ({
         <div className="relative z-10 max-w-6xl mx-auto">
           <div className="cre-rv flex flex-wrap items-end justify-between gap-4 pb-8 border-b border-[#141518]/10">
             <div>
-              <p className="font-mono-tech text-[11px] uppercase tracking-[0.14em] text-[#7c3aed] m-0">
-                Creative Process · 01–05
-              </p>
-              <h2 className="mt-2 text-3xl md:text-5xl font-semibold tracking-[-0.04em] text-[#141518] m-0">
+              <h2 className="text-3xl md:text-5xl font-semibold tracking-[-0.04em] text-[#141518] m-0">
                 How an idea becomes{' '}
                 <span className="font-serif-editorial italic font-normal text-[#7c3aed]">
                   a finished frame
                 </span>
               </h2>
             </div>
-            <span className="text-xs text-[#6b7280]">Select a stage to inspect</span>
           </div>
 
           <div className="mt-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -643,7 +692,7 @@ export const CreativeView: React.FC<CreativeViewProps> = ({
                   >
                     <div className="flex items-baseline gap-4">
                       <span
-                        className={`font-mono-tech text-xs ${
+                        className={`font-mono-tech text-xs tabular-nums ${
                           isActive ? 'text-[#7c3aed] font-bold' : 'text-[#9ca3af]'
                         }`}
                       >
@@ -660,11 +709,12 @@ export const CreativeView: React.FC<CreativeViewProps> = ({
                       </span>
                     </div>
                     <span
-                      className={`text-xs font-mono-tech ${
-                        isActive ? 'text-[#7c3aed]' : 'text-[#9ca3af]'
+                      className={`text-sm transition-transform ${
+                        isActive ? 'text-[#7c3aed] translate-x-0.5' : 'text-[#9ca3af]'
                       }`}
+                      aria-hidden="true"
                     >
-                      {isActive ? 'ACTIVE' : '→'}
+                      →
                     </span>
                   </button>
                 );
@@ -676,14 +726,13 @@ export const CreativeView: React.FC<CreativeViewProps> = ({
               <div className="rounded-[26px] bg-white border border-[#141518]/10 shadow-[0_24px_60px_rgba(124,58,237,0.12)] overflow-hidden">
                 <div className="p-6 pb-4 flex items-center justify-between border-b border-[#141518]/8">
                   <div>
-                    <span className="font-mono-tech text-[11px] uppercase tracking-[0.14em] text-[#7c3aed]">
-                      Stage {activeStep.index} / 05
+                    <span className="font-mono-tech text-xs tabular-nums text-[#7c3aed]">
+                      {activeStep.index} / 05
                     </span>
                     <h3 className="mt-1 text-2xl font-bold tracking-[-0.03em] text-[#141518] m-0">
                       {activeStep.title}
                     </h3>
                   </div>
-                  <span className="font-mono-tech text-xs text-[#6b7280]">WORKFLOW</span>
                 </div>
 
                 <div className="h-[230px] relative overflow-hidden">
@@ -701,102 +750,152 @@ export const CreativeView: React.FC<CreativeViewProps> = ({
         </div>
       </section>
 
-      {/* SECTION 5: Toolkit & Contact Finale */}
-      <section className="studio-grid-surface relative px-5 sm:px-10 lg:px-16 pt-20 pb-32">
+      {/* SECTION 5: Creative Toolkit (Logo-First) & Branded Contact Finale */}
+      <section
+        id="creative-toolkit"
+        className="studio-grid-surface relative px-5 sm:px-10 lg:px-16 pt-20 pb-36"
+      >
         <div className="max-w-6xl mx-auto">
-          {/* Interactive Toolkit Selector */}
+          {/* Logo-First Interactive Creative Toolkit */}
           <div className="cre-rv rounded-[24px] bg-white border border-[#141518]/10 p-6 md:p-8 shadow-[0_12px_36px_rgba(0,0,0,0.04)]">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 pb-6 border-b border-[#141518]/8">
               <div>
-                <p className="font-mono-tech text-[11px] uppercase tracking-[0.14em] text-[#6b7280] m-0">
+                <h3 className="text-xl sm:text-2xl font-semibold tracking-[-0.03em] text-[#141518] m-0">
                   Creative Toolkit
-                </p>
-                <p className="mt-1.5 text-sm text-[#141518] font-medium m-0">
-                  {activeTool.name} —{' '}
-                  <span className="text-[#4b5563] font-normal">{activeTool.role}</span>
+                </h3>
+                <p className="mt-1.5 text-sm text-[#4b5563] m-0">
+                  <span className="font-semibold text-[#141518]">{activeTool.name}</span> —{' '}
+                  {activeTool.role}
                 </p>
               </div>
+            </div>
 
-              <div className="flex flex-wrap gap-2">
-                {CREATIVE_TOOLKIT.map((tool) => {
-                  const selected = tool.name === activeToolName;
-                  return (
-                    <button
-                      key={tool.name}
-                      type="button"
-                      aria-pressed={selected}
-                      onClick={() => setActiveToolName(tool.name)}
-                      className={`px-3.5 py-2 rounded-lg text-xs font-medium cursor-pointer border transition-colors whitespace-nowrap ${
-                        selected
-                          ? 'bg-[#141518] text-white border-[#141518]'
-                          : 'bg-[#f8f9fa] text-[#374151] border-[#141518]/12 hover:border-[#141518]/35'
-                      }`}
-                    >
+            <div
+              className="mt-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3"
+              role="group"
+              aria-label="Creative toolkit tools"
+            >
+              {CREATIVE_TOOLKIT.map((tool) => {
+                const selected = tool.name === activeToolName;
+                return (
+                  <button
+                    key={tool.id}
+                    type="button"
+                    aria-pressed={selected}
+                    aria-label={`${tool.name}: ${tool.role}`}
+                    onClick={() => setActiveToolName(tool.name)}
+                    onMouseEnter={() => setActiveToolName(tool.name)}
+                    className={`group flex items-center gap-3 p-3.5 rounded-2xl text-left cursor-pointer border transition-all ${
+                      selected
+                        ? 'bg-[#141518] text-white border-[#141518] shadow-[0_10px_24px_rgba(20,21,24,0.18)] -translate-y-0.5'
+                        : 'bg-[#f8f9fb] text-[#141518] border-[#141518]/10 hover:bg-white hover:border-[#141518]/30'
+                    }`}
+                  >
+                    <CreativeToolLogo id={tool.id} className="w-9 h-9 shrink-0" />
+                    <span className="text-[13.5px] font-semibold tracking-[-0.015em] leading-tight whitespace-nowrap truncate">
                       {tool.name}
-                    </button>
-                  );
-                })}
-              </div>
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* Closing Contact Statement */}
-          <div className="cre-rv mt-16 lg:mt-20 flex flex-col lg:flex-row lg:items-end justify-between gap-10">
-            <div>
-              <h2 className="text-[clamp(42px,6.5vw,84px)] leading-[0.95] tracking-[-0.05em] font-semibold text-[#141518] m-0 text-balance">
-                I bring imagination{' '}
-                <span className="font-serif-editorial italic font-normal text-[#2563eb]">
-                  to life.
-                </span>
-              </h2>
+          {/* Closing Contact Statement + Socials, Fiverr & Portfolio Links with Logos */}
+          <div id="creative-contact" className="cre-rv mt-16 lg:mt-20">
+            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
+              <div>
+                <h2 className="text-[clamp(42px,6.5vw,84px)] leading-[0.95] tracking-[-0.05em] font-semibold text-[#141518] m-0 text-balance">
+                  I bring imagination{' '}
+                  <span className="font-serif-editorial italic font-normal text-[#2563eb]">
+                    to life.
+                  </span>
+                </h2>
 
-              <div className="mt-8 flex flex-wrap items-center gap-3">
-                <a
-                  href={`mailto:${PORTFOLIO_PROFILE.email}`}
-                  className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-[#141518] text-white text-sm font-medium no-underline hover:bg-[#2563eb] transition-colors"
-                >
-                  <span>Say hello</span>
-                  <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
-                </a>
-                <a
-                  href={PORTFOLIO_PROFILE.linkedinUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-white text-[#141518] border border-[#141518]/18 text-sm font-medium no-underline hover:border-[#141518] transition-colors"
-                >
-                  <span>LinkedIn</span>
-                  <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
-                </a>
+                <div className="mt-7 flex flex-wrap items-center gap-3">
+                  <a
+                    href={`mailto:${profile.contactEmail}`}
+                    className="inline-flex items-center gap-2.5 px-5 py-3 rounded-full bg-[#141518] text-white text-sm font-medium no-underline hover:bg-[#2563eb] transition-colors whitespace-nowrap"
+                  >
+                    <Mail className="w-4 h-4 shrink-0" aria-hidden="true" />
+                    <span>Say hello</span>
+                    <ArrowUpRight className="w-4 h-4 shrink-0" aria-hidden="true" />
+                  </a>
+                  <button
+                    type="button"
+                    onClick={handleCopyEmail}
+                    className="inline-flex items-center gap-2 px-4 py-3 rounded-full bg-white text-[#374151] border border-[#141518]/18 text-sm font-medium cursor-pointer hover:text-[#141518] hover:border-[#141518] transition-colors whitespace-nowrap"
+                  >
+                    {copiedEmail ? (
+                      <>
+                        <Check className="w-4 h-4 text-[#16a34a]" aria-hidden="true" />
+                        <span>Copied Email</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4" aria-hidden="true" />
+                        <span>Copy Email</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 text-sm text-[#6b7280] lg:text-right">
+                <span>
+                  {profile.location} · {profile.creativeYears}
+                </span>
                 <button
                   type="button"
-                  onClick={handleCopyEmail}
-                  className="inline-flex items-center gap-2 px-4 py-3 rounded-full bg-white text-[#374151] border border-[#141518]/18 text-sm font-medium cursor-pointer hover:text-[#141518] hover:border-[#141518] transition-colors"
+                  onClick={onOpenAdmin}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-[#141518]/15 text-xs font-medium text-[#4b5563] hover:text-[#141518] hover:border-[#141518]/40 cursor-pointer transition-colors"
                 >
-                  {copiedEmail ? (
-                    <>
-                      <Check className="w-4 h-4 text-[#16a34a]" aria-hidden="true" />
-                      <span>Copied Email</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-4 h-4" aria-hidden="true" />
-                      <span>Copy Email</span>
-                    </>
-                  )}
+                  <Lock className="w-3 h-3" aria-hidden="true" />
+                  <span>Admin</span>
                 </button>
               </div>
             </div>
 
-            <div className="font-mono-tech text-xs text-[#6b7280] space-y-1 lg:text-right">
-              <div>CREATIVE PORTFOLIO</div>
-              <div>{PORTFOLIO_PROFILE.creative.years} · {PORTFOLIO_PROFILE.location.toUpperCase()}</div>
+            {/* Branded Platform & Social Links Grid: Fiverr, Portfolio, Instagram, LinkedIn, GitHub */}
+            <div
+              className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3"
+              aria-label="Social platforms, Fiverr and portfolio links"
+            >
+              {platformLinks.map((platform) => (
+                <a
+                  key={platform.id}
+                  href={platform.href}
+                  target={platform.external ? '_blank' : undefined}
+                  rel={platform.external ? 'noopener noreferrer' : undefined}
+                  onClick={
+                    !platform.external && platform.href.startsWith('#')
+                      ? (ev) => scrollToSection(ev, platform.href.slice(1))
+                      : undefined
+                  }
+                  className="group flex items-center justify-between gap-3 p-4 rounded-2xl bg-white border border-[#141518]/12 text-[#141518] no-underline hover:border-[#141518]/40 hover:shadow-[0_12px_28px_rgba(20,21,24,0.08)] hover:-translate-y-0.5 transition-all"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <PlatformBrandLogo id={platform.id} className="w-7 h-7 shrink-0" />
+                    <div className="min-w-0">
+                      <div className="text-[14.5px] font-semibold tracking-[-0.015em] text-[#141518] truncate">
+                        {platform.label}
+                      </div>
+                      <div className="text-xs text-[#6b7280] truncate">{platform.handle}</div>
+                    </div>
+                  </div>
+                  <ArrowUpRight
+                    className="w-4 h-4 text-[#9ca3af] group-hover:text-[#141518] shrink-0 transition-colors"
+                    aria-hidden="true"
+                  />
+                </a>
+              ))}
             </div>
           </div>
         </div>
       </section>
 
       <CreativeLightbox
-        works={CREATIVE_WORKS}
+        works={creativeWorks}
         activeIndex={lightboxIndex}
         onClose={() => setLightboxIndex(null)}
         onSelectIndex={(idx) => setLightboxIndex(idx)}

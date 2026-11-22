@@ -36,10 +36,17 @@ export const CreativeLightbox: React.FC<CreativeLightboxProps> = ({
     return () => window.removeEventListener('keydown', onKeyDown, true);
   }, [activeIndex, works.length, onClose, onSelectIndex]);
 
+  const [imageError, setImageError] = React.useState(false);
+
+  useEffect(() => {
+    setImageError(false);
+  }, [work?.id, work?.featureImage]);
+
   if (!work || activeIndex === null) return null;
 
   const prevIndex = (activeIndex - 1 + works.length) % works.length;
   const nextIndex = (activeIndex + 1) % works.length;
+  const showFeatureImage = Boolean(work.featureImage && !imageError);
 
   return (
     <div
@@ -53,7 +60,7 @@ export const CreativeLightbox: React.FC<CreativeLightboxProps> = ({
         className="w-full max-w-4xl max-h-[92dvh] overflow-y-auto bg-white text-[#141518] rounded-[28px] shadow-[0_32px_90px_rgba(0,0,0,0.45)] grid grid-cols-1 md:grid-cols-12 overflow-hidden"
         onClick={(ev) => ev.stopPropagation()}
       >
-        {/* Left: Sleek White Glass Gradient Card Visual */}
+        {/* Left: Uploaded Feature Image or Sleek White Glass Gradient Card Visual */}
         <div className="md:col-span-6 bg-white flex flex-col justify-between min-h-[300px] md:min-h-[460px] border-b md:border-b-0 md:border-r border-[#141518]/10">
           <div className="p-6 pb-2">
             <div className="flex items-center justify-between text-xs text-[#6b7280]">
@@ -65,7 +72,19 @@ export const CreativeLightbox: React.FC<CreativeLightboxProps> = ({
             </h3>
             <p className="mt-1 text-xs text-[#6b7280] m-0">{work.handle}</p>
           </div>
-          <GlassCardOrb theme={work.theme} className="h-[240px] md:h-[310px] w-full" />
+          {showFeatureImage ? (
+            <div className="relative h-[260px] md:h-[340px] w-full overflow-hidden bg-[#141518]">
+              <img
+                src={work.featureImage}
+                alt={`${work.title} — ${work.subtitle}`}
+                referrerPolicy="no-referrer"
+                onError={() => setImageError(true)}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          ) : (
+            <GlassCardOrb theme={work.theme} className="h-[240px] md:h-[310px] w-full" />
+          )}
         </div>
 
         {/* Right: Editorial Direction & Palette Details */}

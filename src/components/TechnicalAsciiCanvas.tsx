@@ -1,17 +1,27 @@
 import React, { useEffect, useRef } from 'react';
 import {
-  ASCII_FIELD_CONFIG,
+  ASCII_DEFAULTS,
   AsciiCell,
+  computeAmbientPoint,
+  computeAsciiCellColors,
   computeAsciiCellState,
   createAsciiGrid,
   getAsciiCellSize,
   mutateRandomAsciiCells,
+  smoothPointer,
 } from '../lib/asciiField';
 
 interface TechnicalAsciiCanvasProps {
   isActive: boolean;
 }
 
+/**
+ * Landing (v2) Technical half — Macrodata field harmonized with the Technical
+ * section's Ruled-Paper Neo-Brutalism (#f4f4f1 paper, #111111 ink, #ffc400
+ * signal yellow highlights, #0f5c3f forest-ink accent).
+ * Supports smoothed pointer swell (11->37px, 0.16->1 alpha within 190px),
+ * 180ms random character mutation, ambient touch drift, and prefers-reduced-motion.
+ */
 export const TechnicalAsciiCanvas: React.FC<TechnicalAsciiCanvasProps> = ({ isActive }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -26,8 +36,13 @@ export const TechnicalAsciiCanvas: React.FC<TechnicalAsciiCanvasProps> = ({ isAc
     let width = 0;
     let height = 0;
     let cellSize = getAsciiCellSize(window.innerWidth);
-    let pointerX: number | null = null;
-    let pointerY: number | null = null;
+    let isVertical = window.innerWidth <= ASCII_DEFAULTS.mobileBreakpoint;
+
+    let rawPointerX: number | null = null;
+    let rawPointerY: number | null = null;
+    let smPointerX: number | null = null;
+    let smPointerY: number | null = null;
+    let hasFinePointer = false;
     let rafId = 0;
     let timerId = 0;
     let lastDrawnCellSize = 0;
@@ -41,6 +56,7 @@ export const TechnicalAsciiCanvas: React.FC<TechnicalAsciiCanvasProps> = ({ isAc
       canvas.height = Math.round(height * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
+      isVertical = window.innerWidth <= ASCII_DEFAULTS.mobileBreakpoint;
       cellSize = getAsciiCellSize(window.innerWidth);
       canvas.dataset.cellSize = String(cellSize);
       cells = createAsciiGrid(width, height, cellSize);
@@ -49,68 +65,125 @@ export const TechnicalAsciiCanvas: React.FC<TechnicalAsciiCanvasProps> = ({ isAc
 
     const drawFrame = (timeMs: number) => {
       if (width <= 0 || height <= 0) return;
+      const reduced = mqReduced.matches;
       ctx.clearRect(0, 0, width, height);
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
+
+      let activeTargetX = rawPointerX;
+      let activeTargetY = rawPointerY;
+
+      // Touch / no active cursor -> slow ambient point drifts so the field stays alive
+      if (!reduced && (activeTargetX === null || activeTargetY === null) && !hasFinePointer) {
+        const ambient = computeAmbientPoint(width, height, timeMs, isVertical);
+        activeTargetX = ambient.x;
+        activeTargetY = ambient.y;
+      }
+
+      if (activeTargetX !== null && activeTargetY !== null) {
+        smPointerX = smoothPointer(smPointerX, activeTargetX, 0.14);
+        smPointerY = smoothPointer(smPointerY, activeTargetY, 0.14);
+      } else {
+        smPointerX = null;
+        smPointerY = null;
+      }
+
+      const baseFont = `500 ${ASCII_DEFAULTS.minFontSize}px "JetBrains Mono", ui-monospace, monospace`;
+      const baseStyle = computeAsciiCellColors(0, ASCII_DEFAULTS.minAlpha).textStyle;
+      const swelled: Array<{ char: string; x: number; y: number; fontSize: number; influence: number; alpha: number }> = [];
+
+      ctx.font = baseFont;
+      ctx.fillStyle = baseStyle;
 
       for (let i = 0; i < cells.length; i++) {
         const cell = cells[i];
         const state = computeAsciiCellState({
           cell,
           timeMs,
-          pointerX,
-          pointerY,
+          pointerX: smPointerX,
+          pointerY: smPointerY,
+          reducedMotion: reduced,
         });
 
-        const weight = state.influence > 0.3 ? 700 : 500;
-        ctx.font = `${weight} ${state.fontSize.toFixed(1)}px "JetBrains Mono", ui-monospace, monospace`;
-
-        if (state.influence > 0.08) {
-          // Swell & brighten: shift dark ink into crisp vivid MDR emerald near pointer
-          const r = Math.round(17 + state.influence * (8 - 17));
-          const g = Math.round(17 + state.influence * (122 - 17));
-          const b = Math.round(17 + state.influence * (82 - 17));
-          ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${state.alpha.toFixed(3)})`;
+        if (state.influence <= 0.005) {
+          ctx.fillText(cell.char, state.x, state.y);
         } else {
-          ctx.fillStyle = `rgba(17, 17, 17, ${state.alpha.toFixed(3)})`;
+          swelled.push({
+            char: cell.char,
+            x: state.x,
+            y: state.y,
+            fontSize: Math.round(state.fontSize),
+            influence: state.influence,
+            alpha: state.alpha,
+          });
+        }
+      }
+
+      let lastFontKey = '';
+      for (let i = 0; i < swelled.length; i++) {
+        const s = swelled[i];
+        const colors = computeAsciiCellColors(s.influence, s.alpha);
+
+        if (colors.highlightBg) {
+          const boxSize = Math.round(s.fontSize * 1.12);
+          const half = boxSize / 2;
+          ctx.fillStyle = colors.highlightBg;
+          ctx.fillRect(s.x - half, s.y - half, boxSize, boxSize);
+          if (colors.highlightBorder) {
+            ctx.strokeStyle = colors.highlightBorder;
+            ctx.lineWidth = 1;
+            ctx.strokeRect(
+              Math.round(s.x - half) + 0.5,
+              Math.round(s.y - half) + 0.5,
+              boxSize - 1,
+              boxSize - 1
+            );
+          }
         }
 
-        ctx.fillText(cell.char, state.x, state.y);
+        const weight = s.influence > 0.28 ? 700 : 500;
+        const fontKey = `${weight} ${s.fontSize}px "JetBrains Mono", ui-monospace, monospace`;
+        if (fontKey !== lastFontKey) {
+          ctx.font = fontKey;
+          lastFontKey = fontKey;
+        }
+        ctx.fillStyle = colors.textStyle;
+        ctx.fillText(s.char, s.x, s.y);
       }
     };
 
     rebuildGrid();
     drawFrame(performance.now());
 
-    if (!isActive) {
-      return;
-    }
+    if (!isActive) return;
 
     const onPointerMove = (ev: PointerEvent) => {
       if (ev.pointerType === 'touch') {
-        pointerX = null;
-        pointerY = null;
+        hasFinePointer = false;
+        rawPointerX = null;
+        rawPointerY = null;
         return;
       }
+      hasFinePointer = true;
       const rect = canvas.getBoundingClientRect();
-      // Track pointer slightly past the canvas boundary so 190px radius smoothly crosses seam
       if (
-        ev.clientX >= rect.left - ASCII_FIELD_CONFIG.pointerRadiusPx &&
-        ev.clientX <= rect.right + ASCII_FIELD_CONFIG.pointerRadiusPx &&
-        ev.clientY >= rect.top - ASCII_FIELD_CONFIG.pointerRadiusPx &&
-        ev.clientY <= rect.bottom + ASCII_FIELD_CONFIG.pointerRadiusPx
+        ev.clientX >= rect.left - ASCII_DEFAULTS.pointerRadiusPx &&
+        ev.clientX <= rect.right + ASCII_DEFAULTS.pointerRadiusPx &&
+        ev.clientY >= rect.top - ASCII_DEFAULTS.pointerRadiusPx &&
+        ev.clientY <= rect.bottom + ASCII_DEFAULTS.pointerRadiusPx
       ) {
-        pointerX = ev.clientX - rect.left;
-        pointerY = ev.clientY - rect.top;
+        rawPointerX = ev.clientX - rect.left;
+        rawPointerY = ev.clientY - rect.top;
       } else {
-        pointerX = null;
-        pointerY = null;
+        rawPointerX = null;
+        rawPointerY = null;
       }
     };
 
     const clearPointer = () => {
-      pointerX = null;
-      pointerY = null;
+      hasFinePointer = false;
+      rawPointerX = null;
+      rawPointerY = null;
     };
 
     const ro = new ResizeObserver(() => {
@@ -134,15 +207,19 @@ export const TechnicalAsciiCanvas: React.FC<TechnicalAsciiCanvasProps> = ({ isAc
     document.documentElement.addEventListener('mouseleave', clearPointer);
 
     if (!mqReduced.matches) {
+      let lastTick = 0;
       const tick = (now: number) => {
-        drawFrame(now);
+        if (now - lastTick >= 33) {
+          lastTick = now;
+          drawFrame(now);
+        }
         rafId = requestAnimationFrame(tick);
       };
       rafId = requestAnimationFrame(tick);
 
       timerId = window.setInterval(() => {
         mutateRandomAsciiCells(cells);
-      }, ASCII_FIELD_CONFIG.mutationIntervalMs);
+      }, ASCII_DEFAULTS.mutationIntervalMs);
     }
 
     return () => {
