@@ -189,23 +189,25 @@
     },
     "ProjectInquiry": {
       "title": "ProjectInquiry",
-      "description": "Visitor-submitted project inquiry from the Start a project contact form. Publicly creatable with strict schema validation; reads and management strictly restricted to verified admins (PII isolated).",
+      "description": "Visitor-submitted contact inquiry from the Lets Talk & Work Together form (Technical and Creative sections). Publicly creatable with strict schema validation; reads and management strictly restricted to verified admins (PII isolated).",
       "type": "object",
       "properties": {
         "name": { "type": "string", "minLength": 2, "maxLength": 80 },
-        "contact": { "type": "string", "minLength": 4, "maxLength": 120 },
-        "needs": { "type": "array", "description": "0 to 6 selected project scope options" },
-        "budget": { "type": "string", "enum": ["", "under $1k", "$1–3k", "$3–7k", "$7k+", "Not sure yet"], "maxLength": 20 },
-        "details": { "type": "string", "minLength": 10, "maxLength": 2000 },
-        "status": { "type": "string", "enum": ["new", "reviewed", "archived"] },
+        "email": { "type": "string", "format": "email", "minLength": 5, "maxLength": 120 },
+        "phone": { "type": "string", "maxLength": 24, "pattern": "^(|[+0-9\\s()\\-]{4,24})$" },
+        "reason": { "type": "string", "enum": ["Freelance project", "Enquiry", "just saying Hii"], "minLength": 4, "maxLength": 30 },
+        "message": { "type": "string", "minLength": 5, "maxLength": 2000 },
+        "source": { "type": "string", "enum": ["technical", "creative"], "minLength": 8, "maxLength": 16 },
+        "status": { "type": "string", "enum": ["new", "reviewed", "archived"], "minLength": 3, "maxLength": 16 },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": [
         "name",
-        "contact",
-        "needs",
-        "budget",
-        "details",
+        "email",
+        "phone",
+        "reason",
+        "message",
+        "source",
         "status",
         "createdAt"
       ]
@@ -234,7 +236,7 @@
     },
     "/project_inquiries/{inquiryId}": {
       "schema": { "$ref": "#/entities/ProjectInquiry" },
-      "description": "Private visitor project inquiries submitted via the Start a project contact form; publicly creatable with strict validation, readable/manageable exclusively by verified admins."
+      "description": "Private visitor inquiries submitted via the Lets Talk & Work Together forms on Technical and Creative pages; publicly creatable with strict validation, readable/manageable exclusively by verified admins."
     }
   }
 }

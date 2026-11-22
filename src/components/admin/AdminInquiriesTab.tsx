@@ -2,15 +2,16 @@ import React, { useState } from 'react';
 import { Archive, CheckCircle2, Inbox, Trash2 } from 'lucide-react';
 import { deleteDoc, doc, updateDoc, type Timestamp } from 'firebase/firestore';
 import { db, recordAuditLog } from '../../lib/firebase';
-import type { InquiryStatus } from '../../lib/contactInquiry';
+import type { ContactSource, InquiryStatus } from '../../lib/contactInquiry';
 
 export interface ProjectInquiryRecord {
   id: string;
   name: string;
-  contact: string;
-  needs: string[];
-  budget: string;
-  details: string;
+  email: string;
+  phone: string;
+  reason: string;
+  message: string;
+  source: ContactSource;
   status: InquiryStatus;
   createdAt: Timestamp | null;
 }
@@ -54,7 +55,7 @@ export const AdminInquiriesTab: React.FC<AdminInquiriesTabProps> = ({ inquiries,
         action: 'delete',
         resourceType: 'project_inquiries',
         resourceId: inquiry.id,
-        summary: `Deleted project inquiry from ${inquiry.name}`,
+        summary: `Deleted contact inquiry from ${inquiry.name}`,
       });
       onNotify('Inquiry deleted.');
     } catch (error) {
@@ -69,9 +70,9 @@ export const AdminInquiriesTab: React.FC<AdminInquiriesTabProps> = ({ inquiries,
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900 m-0">Project Inquiries</h2>
+          <h2 className="text-lg font-semibold text-slate-900 m-0">Contact Inquiries</h2>
           <p className="text-xs text-slate-500 mt-1 mb-0">
-            Submissions from the Start a project contact form ({inquiries.length} total).
+            Submissions from the Technical &amp; Creative contact forms ({inquiries.length} total).
           </p>
         </div>
 
@@ -98,7 +99,7 @@ export const AdminInquiriesTab: React.FC<AdminInquiriesTabProps> = ({ inquiries,
           <Inbox className="w-7 h-7 text-slate-400 mx-auto" aria-hidden="true" />
           <p className="text-sm font-medium text-slate-700 m-0">No inquiries in this view</p>
           <p className="text-xs text-slate-500 m-0">
-            Visitor project briefs submitted through the footer form will appear here automatically.
+            Messages sent via the Technical or Creative contact forms will appear here automatically.
           </p>
         </div>
       ) : (
@@ -121,18 +122,35 @@ export const AdminInquiriesTab: React.FC<AdminInquiriesTabProps> = ({ inquiries,
                       <span className="text-xs text-slate-400" aria-hidden="true">
                         ·
                       </span>
-                      <span className="font-mono-tech text-xs text-slate-700">{item.contact}</span>
+                      <a
+                        href={`mailto:${item.email}`}
+                        className="font-mono-tech text-xs text-slate-700 hover:text-blue-600 no-underline"
+                      >
+                        {item.email}
+                      </a>
+                      {item.phone && (
+                        <>
+                          <span className="text-xs text-slate-400" aria-hidden="true">
+                            ·
+                          </span>
+                          <span className="font-mono-tech text-xs text-slate-600">
+                            {item.phone}
+                          </span>
+                        </>
+                      )}
                     </div>
                     <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                       <span className="capitalize font-medium text-slate-700">{item.status}</span>
                       <span aria-hidden="true">·</span>
-                      <span>{createdLabel}</span>
-                      {item.budget && (
+                      <span className="capitalize font-medium text-slate-700">{item.source}</span>
+                      {item.reason && (
                         <>
                           <span aria-hidden="true">·</span>
-                          <span>Budget: {item.budget}</span>
+                          <span>{item.reason}</span>
                         </>
                       )}
+                      <span aria-hidden="true">·</span>
+                      <span>{createdLabel}</span>
                     </div>
                   </div>
 
@@ -172,15 +190,8 @@ export const AdminInquiriesTab: React.FC<AdminInquiriesTabProps> = ({ inquiries,
                   </div>
                 </div>
 
-                {item.needs.length > 0 && (
-                  <div className="text-xs text-slate-600">
-                    <span className="font-medium text-slate-800">Needs:</span>{' '}
-                    {item.needs.join(' · ')}
-                  </div>
-                )}
-
                 <p className="m-0 text-sm leading-relaxed text-slate-700 whitespace-pre-wrap border-t border-slate-100 pt-3">
-                  {item.details}
+                  {item.message}
                 </p>
               </article>
             );

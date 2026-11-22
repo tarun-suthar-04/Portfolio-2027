@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowUpRight, Check, Copy, Lock, Mail } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 import {
   CREATIVE_TOOLKIT,
   CreativeCategory,
@@ -14,6 +14,7 @@ import { CreativeLightbox } from './CreativeLightbox';
 import { CreativeToolLogo, PlatformBrandLogo } from './CreativeBrandLogos';
 import { CubicMatrixCluster, GlassCardOrb } from './CubicGlassGrid';
 import { ProcessPreviewArt } from './CreativeArtwork';
+import { CreativeContactSection } from './CreativeContactSection';
 
 interface CreativeViewProps {
   activeView: ViewMode;
@@ -67,7 +68,6 @@ export const CreativeView: React.FC<CreativeViewProps> = ({
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [activeStepIndex, setActiveStepIndex] = useState<number>(0);
   const [activeToolName, setActiveToolName] = useState<string>(CREATIVE_TOOLKIT[0].name);
-  const [copiedEmail, setCopiedEmail] = useState(false);
   const [hoveredWord, setHoveredWord] = useState<ManifestoWordKey | null>(null);
   const [pinnedWord, setPinnedWord] = useState<ManifestoWordKey | null>(null);
   const [failedWordImages, setFailedWordImages] = useState<Record<string, boolean>>({});
@@ -178,16 +178,6 @@ export const CreativeView: React.FC<CreativeViewProps> = ({
       window.removeEventListener('keydown', onKeyDown);
     };
   }, [activeView, onReturnLanding, lightboxIndex, pinnedWord, hoveredWord]);
-
-  const handleCopyEmail = async () => {
-    try {
-      await navigator.clipboard.writeText(profile.contactEmail);
-      setCopiedEmail(true);
-      window.setTimeout(() => setCopiedEmail(false), 2200);
-    } catch {
-      window.location.href = `mailto:${profile.contactEmail}`;
-    }
-  };
 
   const scrollToSection = (ev: React.MouseEvent<HTMLAnchorElement>, sectionId: string) => {
     ev.preventDefault();
@@ -801,60 +791,13 @@ export const CreativeView: React.FC<CreativeViewProps> = ({
             </div>
           </div>
 
-          {/* Closing Contact Statement + Socials, Fiverr & Portfolio Links with Logos */}
-          <div id="creative-contact" className="cre-rv mt-16 lg:mt-20">
-            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
-              <div>
-                <h2 className="text-[clamp(42px,6.5vw,84px)] leading-[0.95] tracking-[-0.05em] font-semibold text-[#141518] m-0 text-balance">
-                  I bring imagination{' '}
-                  <span className="font-serif-editorial italic font-normal text-[#2563eb]">
-                    to life.
-                  </span>
-                </h2>
-
-                <div className="mt-7 flex flex-wrap items-center gap-3">
-                  <a
-                    href={`mailto:${profile.contactEmail}`}
-                    className="inline-flex items-center gap-2.5 px-5 py-3 rounded-full bg-[#141518] text-white text-sm font-medium no-underline hover:bg-[#2563eb] transition-colors whitespace-nowrap"
-                  >
-                    <Mail className="w-4 h-4 shrink-0" aria-hidden="true" />
-                    <span>Say hello</span>
-                    <ArrowUpRight className="w-4 h-4 shrink-0" aria-hidden="true" />
-                  </a>
-                  <button
-                    type="button"
-                    onClick={handleCopyEmail}
-                    className="inline-flex items-center gap-2 px-4 py-3 rounded-full bg-white text-[#374151] border border-[#141518]/18 text-sm font-medium cursor-pointer hover:text-[#141518] hover:border-[#141518] transition-colors whitespace-nowrap"
-                  >
-                    {copiedEmail ? (
-                      <>
-                        <Check className="w-4 h-4 text-[#16a34a]" aria-hidden="true" />
-                        <span>Copied Email</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-4 h-4" aria-hidden="true" />
-                        <span>Copy Email</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 text-sm text-[#6b7280] lg:text-right">
-                <span>
-                  {profile.location} · {profile.creativeYears}
-                </span>
-                <button
-                  type="button"
-                  onClick={onOpenAdmin}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-[#141518]/15 text-xs font-medium text-[#4b5563] hover:text-[#141518] hover:border-[#141518]/40 cursor-pointer transition-colors"
-                >
-                  <Lock className="w-3 h-3" aria-hidden="true" />
-                  <span>Admin</span>
-                </button>
-              </div>
-            </div>
+          {/* Closing Contact Form + Socials, Fiverr & Portfolio Links with Logos */}
+          <div id="creative-contact" className="cre-rv mt-14 lg:mt-16">
+            <CreativeContactSection
+              location={profile.location}
+              creativeYears={profile.creativeYears}
+              onOpenAdmin={onOpenAdmin}
+            />
 
             {/* Branded Platform & Social Links Grid: Fiverr, Portfolio, Instagram, LinkedIn, GitHub */}
             <div

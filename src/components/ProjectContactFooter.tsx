@@ -1,17 +1,23 @@
 import React, { useState } from 'react';
-import { ArrowRight, ArrowUpRight, CheckCircle2, FileText, Lock, RotateCcw } from 'lucide-react';
+import {
+  ArrowRight,
+  ArrowUpRight,
+  CheckCircle2,
+  ChevronDown,
+  FileText,
+  Lock,
+  RotateCcw,
+} from 'lucide-react';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import {
-  PROJECT_BUDGET_OPTIONS,
-  PROJECT_NEED_OPTIONS,
-  toggleBudgetSelection,
-  toggleNeedSelection,
-  validateProjectInquiry,
-  type ProjectBudgetOption,
-  type ProjectInquiryFieldErrors,
-  type ProjectNeedOption,
-  type SanitizedProjectInquiry,
+  CONTACT_DIRECT_EMAIL,
+  CONTACT_REASON_OPTIONS,
+  DEFAULT_CONTACT_REASON,
+  validateContactInquiry,
+  type ContactInquiryFieldErrors,
+  type ContactReasonOption,
+  type SanitizedContactInquiry,
 } from '../lib/contactInquiry';
 
 interface ProjectContactFooterProps {
@@ -32,36 +38,22 @@ export const ProjectContactFooter: React.FC<ProjectContactFooterProps> = ({
   onOpenAdmin,
 }) => {
   const [name, setName] = useState('');
-  const [contact, setContact] = useState('');
-  const [needs, setNeeds] = useState<ProjectNeedOption[]>([]);
-  const [budget, setBudget] = useState<ProjectBudgetOption | ''>('');
-  const [details, setDetails] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [reason, setReason] = useState<ContactReasonOption>(DEFAULT_CONTACT_REASON);
+  const [message, setMessage] = useState('');
 
-  const [fieldErrors, setFieldErrors] = useState<ProjectInquiryFieldErrors>({});
+  const [fieldErrors, setFieldErrors] = useState<ContactInquiryFieldErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [submittedRecord, setSubmittedRecord] = useState<SanitizedProjectInquiry | null>(null);
-
-  const handleToggleNeed = (option: ProjectNeedOption) => {
-    setNeeds((prev) => toggleNeedSelection(prev, option));
-    if (fieldErrors.needs) {
-      setFieldErrors((prev) => ({ ...prev, needs: undefined }));
-    }
-  };
-
-  const handleToggleBudget = (option: ProjectBudgetOption) => {
-    setBudget((prev) => toggleBudgetSelection(prev, option));
-    if (fieldErrors.budget) {
-      setFieldErrors((prev) => ({ ...prev, budget: undefined }));
-    }
-  };
+  const [submittedRecord, setSubmittedRecord] = useState<SanitizedContactInquiry | null>(null);
 
   const handleResetForm = () => {
     setName('');
-    setContact('');
-    setNeeds([]);
-    setBudget('');
-    setDetails('');
+    setEmail('');
+    setPhone('');
+    setReason(DEFAULT_CONTACT_REASON);
+    setMessage('');
     setFieldErrors({});
     setSubmitError(null);
     setSubmittedRecord(null);
@@ -72,12 +64,13 @@ export const ProjectContactFooter: React.FC<ProjectContactFooterProps> = ({
     if (submitting) return;
 
     setSubmitError(null);
-    const result = validateProjectInquiry({
+    const result = validateContactInquiry({
       name,
-      contact,
-      needs,
-      budget,
-      details,
+      email,
+      phone,
+      reason,
+      message,
+      source: 'technical',
     });
 
     if (!result.ok || !result.data) {
@@ -95,9 +88,9 @@ export const ProjectContactFooter: React.FC<ProjectContactFooterProps> = ({
       });
       setSubmittedRecord(result.data);
     } catch (error) {
-      console.error('Failed to submit project inquiry:', error);
+      console.error('Failed to submit contact inquiry:', error);
       setSubmitError(
-        'Could not deliver your message right now. Please check your connection and try again.'
+        'Could not send your details right now. Please check your connection and try again.'
       );
     } finally {
       setSubmitting(false);
@@ -107,34 +100,40 @@ export const ProjectContactFooter: React.FC<ProjectContactFooterProps> = ({
   return (
     <footer
       id="tech-contact"
-      aria-labelledby="start-project-heading"
+      aria-labelledby="tech-contact-heading"
       className="mt-8 bg-[#111111] text-white border-2 border-[#111111] shadow-[5px_6px_0_#ffc400]"
     >
       <div className="p-6 sm:p-10 lg:p-12">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
-          {/* Left Column — Editorial Heading & Intro */}
+          {/* Left Column — Editorial Heading & Direct Email Line */}
           <div className="lg:col-span-5">
             <h2
-              id="start-project-heading"
-              className="m-0 text-[38px] sm:text-[48px] lg:text-[56px] font-extrabold tracking-[-0.048em] leading-[0.96] text-white text-balance"
+              id="tech-contact-heading"
+              className="m-0 text-[36px] sm:text-[46px] lg:text-[52px] font-extrabold tracking-[-0.048em] leading-[0.98] text-white text-balance"
             >
-              Start a{' '}
-              <span className="inline-block bg-[#ffc400] text-[#111111] px-2.5 py-0.5 leading-[0.95]">
-                project
+              Lets Talk &amp;{' '}
+              <span className="inline-block bg-[#ffc400] text-[#111111] px-2.5 py-0.5 mt-1 leading-[0.98]">
+                Work Together
               </span>
             </h2>
 
-            <p className="mt-5 mb-0 text-[15.5px] sm:text-[16.5px] leading-[1.6] text-white/78 max-w-[36ch]">
-              A few lines about the task — and I will come back with questions or an estimate.
+            <p className="mt-6 mb-0 text-[15px] sm:text-[16px] leading-[1.6] text-white/75">
+              Or just write:{' '}
+              <a
+                href={`mailto:${CONTACT_DIRECT_EMAIL}`}
+                className="font-mono-tech text-[14px] sm:text-[15px] text-white underline decoration-[#ffc400] decoration-2 underline-offset-4 hover:text-[#ffc400] transition-colors break-all"
+              >
+                {CONTACT_DIRECT_EMAIL}
+              </a>
             </p>
           </div>
 
-          {/* Right Column — Start a Project Form */}
+          {/* Right Column — Contact Form */}
           <div className="lg:col-span-7">
             {submittedRecord ? (
               <div
                 role="status"
-                data-testid="contact-form-success"
+                data-testid="tech-contact-success"
                 className="border border-white/25 bg-white/[0.04] p-6 sm:p-8 space-y-5"
               >
                 <div className="flex items-start gap-3.5">
@@ -144,40 +143,37 @@ export const ProjectContactFooter: React.FC<ProjectContactFooterProps> = ({
                   />
                   <div>
                     <h3 className="m-0 text-[22px] font-bold tracking-[-0.03em] text-white">
-                      Brief received — thank you, {submittedRecord.name}.
+                      Details received — thank you, {submittedRecord.name}.
                     </h3>
                     <p className="mt-1.5 mb-0 text-[14.5px] leading-[1.55] text-white/75">
-                      I will review your project notes and get back to you at{' '}
-                      <span className="font-mono-tech text-white">{submittedRecord.contact}</span>{' '}
-                      with questions or an estimate.
+                      Your <span className="text-white font-semibold">{submittedRecord.reason}</span>{' '}
+                      note is in my inbox. I&apos;ll reply to{' '}
+                      <span className="font-mono-tech text-white">{submittedRecord.email}</span>{' '}
+                      usually the same day.
                     </p>
                   </div>
                 </div>
 
-                {(submittedRecord.needs.length > 0 || submittedRecord.budget) && (
-                  <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-white/15 m-0">
-                    {submittedRecord.needs.length > 0 && (
-                      <div>
-                        <dt className="font-mono-tech text-[10.5px] uppercase tracking-[0.12em] text-white/55">
-                          What you need
-                        </dt>
-                        <dd className="m-0 mt-1 text-[13.5px] text-white/90">
-                          {submittedRecord.needs.join(' · ')}
-                        </dd>
-                      </div>
-                    )}
-                    {submittedRecord.budget && (
-                      <div>
-                        <dt className="font-mono-tech text-[10.5px] uppercase tracking-[0.12em] text-white/55">
-                          Budget
-                        </dt>
-                        <dd className="m-0 mt-1 text-[13.5px] text-white/90">
-                          {submittedRecord.budget}
-                        </dd>
-                      </div>
-                    )}
-                  </dl>
-                )}
+                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-white/15 m-0">
+                  <div>
+                    <dt className="font-mono-tech text-[10.5px] uppercase tracking-[0.12em] text-white/55">
+                      Reason
+                    </dt>
+                    <dd className="m-0 mt-1 text-[13.5px] text-white/90">
+                      {submittedRecord.reason}
+                    </dd>
+                  </div>
+                  {submittedRecord.phone && (
+                    <div>
+                      <dt className="font-mono-tech text-[10.5px] uppercase tracking-[0.12em] text-white/55">
+                        Phone
+                      </dt>
+                      <dd className="m-0 mt-1 font-mono-tech text-[13.5px] text-white/90">
+                        {submittedRecord.phone}
+                      </dd>
+                    </div>
+                  )}
+                </dl>
 
                 <div className="pt-2">
                   <button
@@ -186,7 +182,7 @@ export const ProjectContactFooter: React.FC<ProjectContactFooterProps> = ({
                     className="inline-flex items-center gap-2 font-mono-tech text-[12px] font-bold uppercase tracking-[0.08em] px-4 py-2.5 border border-white/30 bg-transparent text-white hover:border-[#ffc400] hover:text-[#ffc400] transition-colors cursor-pointer whitespace-nowrap shrink-0"
                   >
                     <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
-                    <span>Send another project brief</span>
+                    <span>Send another message</span>
                   </button>
                 </div>
               </div>
@@ -194,20 +190,20 @@ export const ProjectContactFooter: React.FC<ProjectContactFooterProps> = ({
               <form
                 onSubmit={handleSubmit}
                 noValidate
-                data-testid="start-project-form"
-                className="flex flex-col gap-6"
+                data-testid="tech-contact-form"
+                className="flex flex-col gap-5"
               >
-                {/* Text Inputs Row */}
+                {/* Row 1: NAME + EMAIL */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div>
                     <label
-                      htmlFor="contact-name"
+                      htmlFor="tech-contact-name"
                       className="block font-mono-tech text-[11px] font-bold uppercase tracking-[0.13em] text-white/85 mb-2"
                     >
                       NAME <span className="text-[#ffc400]">*</span>
                     </label>
                     <input
-                      id="contact-name"
+                      id="tech-contact-name"
                       name="name"
                       type="text"
                       required
@@ -220,9 +216,9 @@ export const ProjectContactFooter: React.FC<ProjectContactFooterProps> = ({
                           setFieldErrors((prev) => ({ ...prev, name: undefined }));
                         }
                       }}
-                      placeholder="How should I call you"
+                      placeholder="Your full name"
                       aria-invalid={Boolean(fieldErrors.name)}
-                      aria-describedby={fieldErrors.name ? 'contact-name-error' : undefined}
+                      aria-describedby={fieldErrors.name ? 'tech-contact-name-error' : undefined}
                       className={`w-full px-3.5 py-3 bg-[#1a1c20] text-[15px] text-white placeholder:text-white/40 border transition-colors focus:outline-none ${
                         fieldErrors.name
                           ? 'border-[#f87171] focus:border-[#f87171]'
@@ -231,7 +227,7 @@ export const ProjectContactFooter: React.FC<ProjectContactFooterProps> = ({
                     />
                     {fieldErrors.name && (
                       <p
-                        id="contact-name-error"
+                        id="tech-contact-name-error"
                         role="alert"
                         className="mt-1.5 mb-0 font-mono-tech text-[11px] text-[#fca5a5]"
                       >
@@ -242,136 +238,178 @@ export const ProjectContactFooter: React.FC<ProjectContactFooterProps> = ({
 
                   <div>
                     <label
-                      htmlFor="contact-handle"
+                      htmlFor="tech-contact-email"
                       className="block font-mono-tech text-[11px] font-bold uppercase tracking-[0.13em] text-white/85 mb-2"
                     >
-                      EMAIL OR TELEGRAM <span className="text-[#ffc400]">*</span>
+                      EMAIL <span className="text-[#ffc400]">*</span>
                     </label>
                     <input
-                      id="contact-handle"
-                      name="contact"
-                      type="text"
+                      id="tech-contact-email"
+                      name="email"
+                      type="email"
                       required
+                      autoComplete="email"
                       maxLength={120}
-                      value={contact}
+                      value={email}
                       onChange={(e) => {
-                        setContact(e.target.value);
-                        if (fieldErrors.contact) {
-                          setFieldErrors((prev) => ({ ...prev, contact: undefined }));
+                        setEmail(e.target.value);
+                        if (fieldErrors.email) {
+                          setFieldErrors((prev) => ({ ...prev, email: undefined }));
                         }
                       }}
-                      placeholder="name@mail.com or @nickname"
-                      aria-invalid={Boolean(fieldErrors.contact)}
-                      aria-describedby={fieldErrors.contact ? 'contact-handle-error' : undefined}
+                      placeholder="name@company.com"
+                      aria-invalid={Boolean(fieldErrors.email)}
+                      aria-describedby={fieldErrors.email ? 'tech-contact-email-error' : undefined}
                       className={`w-full px-3.5 py-3 bg-[#1a1c20] text-[15px] text-white placeholder:text-white/40 border transition-colors focus:outline-none ${
-                        fieldErrors.contact
+                        fieldErrors.email
                           ? 'border-[#f87171] focus:border-[#f87171]'
                           : 'border-white/22 focus:border-[#ffc400]'
                       }`}
                     />
-                    {fieldErrors.contact && (
+                    {fieldErrors.email && (
                       <p
-                        id="contact-handle-error"
+                        id="tech-contact-email-error"
                         role="alert"
                         className="mt-1.5 mb-0 font-mono-tech text-[11px] text-[#fca5a5]"
                       >
-                        {fieldErrors.contact}
+                        {fieldErrors.email}
                       </p>
                     )}
                   </div>
                 </div>
 
-                {/* WHAT YOU NEED — Multi-select Options */}
-                <fieldset className="border-0 p-0">
-                  <legend className="block font-mono-tech text-[11px] font-bold uppercase tracking-[0.13em] text-white/85 mb-2.5 p-0">
-                    WHAT YOU NEED
-                  </legend>
-                  <div className="flex flex-wrap gap-2">
-                    {PROJECT_NEED_OPTIONS.map((option) => {
-                      const active = needs.includes(option);
-                      return (
-                        <button
-                          key={option}
-                          type="button"
-                          aria-pressed={active}
-                          onClick={() => handleToggleNeed(option)}
-                          className={`px-3.5 py-2 font-mono-tech text-[12px] border transition-all cursor-pointer whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffc400] focus-visible:ring-offset-2 focus-visible:ring-offset-[#111111] ${
-                            active
-                              ? 'bg-[#ffc400] text-[#111111] border-[#ffc400] font-bold shadow-[2px_2px_0_rgba(255,255,255,0.28)]'
-                              : 'bg-transparent text-white/82 border-white/25 hover:border-white/65 hover:text-white font-medium'
-                          }`}
-                        >
-                          {option}
-                        </button>
-                      );
-                    })}
+                {/* Row 2: PHONE + REASON */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div>
+                    <label
+                      htmlFor="tech-contact-phone"
+                      className="block font-mono-tech text-[11px] font-bold uppercase tracking-[0.13em] text-white/85 mb-2"
+                    >
+                      PHONE
+                    </label>
+                    <input
+                      id="tech-contact-phone"
+                      name="phone"
+                      type="tel"
+                      autoComplete="tel"
+                      maxLength={24}
+                      value={phone}
+                      onChange={(e) => {
+                        setPhone(e.target.value);
+                        if (fieldErrors.phone) {
+                          setFieldErrors((prev) => ({ ...prev, phone: undefined }));
+                        }
+                      }}
+                      placeholder="+91"
+                      aria-invalid={Boolean(fieldErrors.phone)}
+                      aria-describedby={fieldErrors.phone ? 'tech-contact-phone-error' : undefined}
+                      className={`w-full px-3.5 py-3 bg-[#1a1c20] text-[15px] text-white placeholder:text-white/40 border transition-colors focus:outline-none ${
+                        fieldErrors.phone
+                          ? 'border-[#f87171] focus:border-[#f87171]'
+                          : 'border-white/22 focus:border-[#ffc400]'
+                      }`}
+                    />
+                    {fieldErrors.phone && (
+                      <p
+                        id="tech-contact-phone-error"
+                        role="alert"
+                        className="mt-1.5 mb-0 font-mono-tech text-[11px] text-[#fca5a5]"
+                      >
+                        {fieldErrors.phone}
+                      </p>
+                    )}
                   </div>
-                </fieldset>
 
-                {/* BUDGET — Single-select Options */}
-                <fieldset className="border-0 p-0">
-                  <legend className="block font-mono-tech text-[11px] font-bold uppercase tracking-[0.13em] text-white/85 mb-2.5 p-0">
-                    BUDGET
-                  </legend>
-                  <div className="flex flex-wrap gap-2">
-                    {PROJECT_BUDGET_OPTIONS.map((option) => {
-                      const active = budget === option;
-                      return (
-                        <button
-                          key={option}
-                          type="button"
-                          aria-pressed={active}
-                          onClick={() => handleToggleBudget(option)}
-                          className={`px-3.5 py-2 font-mono-tech text-[12px] border transition-all cursor-pointer whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffc400] focus-visible:ring-offset-2 focus-visible:ring-offset-[#111111] ${
-                            active
-                              ? 'bg-[#ffc400] text-[#111111] border-[#ffc400] font-bold shadow-[2px_2px_0_rgba(255,255,255,0.28)]'
-                              : 'bg-transparent text-white/82 border-white/25 hover:border-white/65 hover:text-white font-medium'
-                          }`}
-                        >
-                          {option}
-                        </button>
-                      );
-                    })}
+                  <div>
+                    <label
+                      htmlFor="tech-contact-reason"
+                      className="block font-mono-tech text-[11px] font-bold uppercase tracking-[0.13em] text-white/85 mb-2"
+                    >
+                      REASON
+                    </label>
+                    <div className="relative">
+                      <select
+                        id="tech-contact-reason"
+                        name="reason"
+                        value={reason}
+                        onChange={(e) => {
+                          setReason(e.target.value as ContactReasonOption);
+                          if (fieldErrors.reason) {
+                            setFieldErrors((prev) => ({ ...prev, reason: undefined }));
+                          }
+                        }}
+                        aria-invalid={Boolean(fieldErrors.reason)}
+                        aria-describedby={fieldErrors.reason ? 'tech-contact-reason-error' : undefined}
+                        className={`w-full appearance-none px-3.5 py-3 pr-10 bg-[#1a1c20] text-[15px] text-white border transition-colors focus:outline-none cursor-pointer ${
+                          fieldErrors.reason
+                            ? 'border-[#f87171] focus:border-[#f87171]'
+                            : 'border-white/22 focus:border-[#ffc400]'
+                        }`}
+                      >
+                        {CONTACT_REASON_OPTIONS.map((option) => (
+                          <option
+                            key={option}
+                            value={option}
+                            className="bg-[#1a1c20] text-white"
+                          >
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown
+                        className="w-4 h-4 text-white/65 pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2"
+                        aria-hidden="true"
+                      />
+                    </div>
+                    {fieldErrors.reason && (
+                      <p
+                        id="tech-contact-reason-error"
+                        role="alert"
+                        className="mt-1.5 mb-0 font-mono-tech text-[11px] text-[#fca5a5]"
+                      >
+                        {fieldErrors.reason}
+                      </p>
+                    )}
                   </div>
-                </fieldset>
+                </div>
 
-                {/* ABOUT THE PROJECT Textarea */}
+                {/* Row 3: MESSAGE */}
                 <div>
                   <label
-                    htmlFor="contact-details"
+                    htmlFor="tech-contact-message"
                     className="block font-mono-tech text-[11px] font-bold uppercase tracking-[0.13em] text-white/85 mb-2"
                   >
-                    ABOUT THE PROJECT <span className="text-[#ffc400]">*</span>
+                    MESSAGE <span className="text-[#ffc400]">*</span>
                   </label>
                   <textarea
-                    id="contact-details"
-                    name="details"
+                    id="tech-contact-message"
+                    name="message"
                     required
                     rows={4}
                     maxLength={2000}
-                    value={details}
+                    value={message}
                     onChange={(e) => {
-                      setDetails(e.target.value);
-                      if (fieldErrors.details) {
-                        setFieldErrors((prev) => ({ ...prev, details: undefined }));
+                      setMessage(e.target.value);
+                      if (fieldErrors.message) {
+                        setFieldErrors((prev) => ({ ...prev, message: undefined }));
                       }
                     }}
-                    placeholder="What we are building, timing, links to designs"
-                    aria-invalid={Boolean(fieldErrors.details)}
-                    aria-describedby={fieldErrors.details ? 'contact-details-error' : undefined}
-                    className={`w-full px-3.5 py-3 bg-[#1a1c20] text-[15px] leading-[1.55] text-white placeholder:text-white/40 border transition-colors resize-y min-h-[116px] focus:outline-none ${
-                      fieldErrors.details
+                    placeholder="A few words"
+                    aria-invalid={Boolean(fieldErrors.message)}
+                    aria-describedby={fieldErrors.message ? 'tech-contact-message-error' : undefined}
+                    className={`w-full px-3.5 py-3 bg-[#1a1c20] text-[15px] leading-[1.55] text-white placeholder:text-white/40 border transition-colors resize-y min-h-[112px] focus:outline-none ${
+                      fieldErrors.message
                         ? 'border-[#f87171] focus:border-[#f87171]'
                         : 'border-white/22 focus:border-[#ffc400]'
                     }`}
                   />
-                  {fieldErrors.details && (
+                  {fieldErrors.message && (
                     <p
-                      id="contact-details-error"
+                      id="tech-contact-message-error"
                       role="alert"
                       className="mt-1.5 mb-0 font-mono-tech text-[11px] text-[#fca5a5]"
                     >
-                      {fieldErrors.details}
+                      {fieldErrors.message}
                     </p>
                   )}
                 </div>
@@ -385,20 +423,26 @@ export const ProjectContactFooter: React.FC<ProjectContactFooterProps> = ({
                   </p>
                 )}
 
-                {/* Submit Action */}
-                <div className="pt-1 flex flex-wrap items-center justify-between gap-4">
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="inline-flex items-center gap-2.5 font-mono-tech text-[13px] font-bold uppercase tracking-[0.1em] px-7 py-3.5 bg-[#ffc400] text-[#111111] border border-[#ffc400] shadow-[3px_3px_0_rgba(255,255,255,0.28)] hover:-translate-x-px hover:-translate-y-px hover:shadow-[4px_4px_0_rgba(255,255,255,0.36)] active:translate-x-px active:translate-y-px disabled:opacity-60 disabled:cursor-not-allowed transition-all cursor-pointer whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#111111]"
-                  >
-                    <span>{submitting ? 'SENDING...' : 'SEND'}</span>
-                    <ArrowRight className="w-4 h-4" aria-hidden="true" />
-                  </button>
+                {/* Submit Action + Helper & Privacy Notes */}
+                <div className="pt-1 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="inline-flex items-center justify-center gap-2.5 font-mono-tech text-[13px] font-bold uppercase tracking-[0.09em] px-7 py-3.5 bg-[#ffc400] text-[#111111] border border-[#ffc400] shadow-[3px_3px_0_rgba(255,255,255,0.28)] hover:-translate-x-px hover:-translate-y-px hover:shadow-[4px_4px_0_rgba(255,255,255,0.36)] active:translate-x-px active:translate-y-px disabled:opacity-60 disabled:cursor-not-allowed transition-all cursor-pointer whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#111111]"
+                    >
+                      <span>{submitting ? 'Sending...' : 'Send Details'}</span>
+                      <ArrowRight className="w-4 h-4" aria-hidden="true" />
+                    </button>
 
-                  <span className="font-mono-tech text-[11px] text-white/50">
-                    * Required fields
-                  </span>
+                    <p className="m-0 text-[13.5px] leading-[1.5] text-white/75">
+                      No spam. A real reply, usually the same day.
+                    </p>
+                  </div>
+
+                  <p className="m-0 font-mono-tech text-[11.5px] text-white/50">
+                    Sent details land in my inbox and nowhere else
+                  </p>
                 </div>
               </form>
             )}

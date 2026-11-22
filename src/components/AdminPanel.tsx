@@ -235,13 +235,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ activeView, onNavigateVi
               const data = d.data();
               const statusVal =
                 data.status === 'reviewed' || data.status === 'archived' ? data.status : 'new';
+              const sourceVal = data.source === 'creative' ? 'creative' : 'technical';
               return {
                 id: d.id,
                 name: String(data.name ?? ''),
-                contact: String(data.contact ?? ''),
-                needs: Array.isArray(data.needs) ? data.needs.map(String) : [],
-                budget: String(data.budget ?? ''),
-                details: String(data.details ?? ''),
+                email: String(data.email ?? data.contact ?? ''),
+                phone: String(data.phone ?? ''),
+                reason: String(data.reason ?? ''),
+                message: String(data.message ?? data.details ?? ''),
+                source: sourceVal,
                 status: statusVal,
                 createdAt: (data.createdAt as Timestamp | null) ?? null,
               };

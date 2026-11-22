@@ -1,98 +1,89 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  isValidContactHandle,
-  PROJECT_BUDGET_OPTIONS,
-  PROJECT_NEED_OPTIONS,
-  toggleBudgetSelection,
-  toggleNeedSelection,
-  validateProjectInquiry,
+  CONTACT_DIRECT_EMAIL,
+  CONTACT_REASON_OPTIONS,
+  DEFAULT_CONTACT_REASON,
+  isValidInquiryEmail,
+  isValidInquiryPhone,
+  validateContactInquiry,
 } from './contactInquiry';
 
-test('isValidContactHandle accepts valid emails and Telegram handles while rejecting malformed strings', () => {
-  assert.equal(isValidContactHandle('alex@studio.io'), true);
-  assert.equal(isValidContactHandle('@tarun_dev'), true);
-  assert.equal(isValidContactHandle('@ab'), false);
-  assert.equal(isValidContactHandle('not-an-email'), false);
-  assert.equal(isValidContactHandle('@bad handle'), false);
-  assert.equal(isValidContactHandle(''), false);
+test('CONTACT_REASON_OPTIONS, default reason, and direct email match specification', () => {
+  assert.deepEqual(CONTACT_REASON_OPTIONS, [
+    'Freelance project',
+    'Enquiry',
+    'just saying Hii',
+  ]);
+  assert.equal(DEFAULT_CONTACT_REASON, 'Freelance project');
+  assert.equal(CONTACT_DIRECT_EMAIL, 'dor@pamidordesign.co');
 });
 
-test('toggleNeedSelection adds and removes options cleanly without duplicates', () => {
-  let needs = toggleNeedSelection([], 'Website');
-  assert.deepEqual(needs, ['Website']);
-  needs = toggleNeedSelection(needs, '3D / WebGL');
-  assert.deepEqual(needs, ['Website', '3D / WebGL']);
-  needs = toggleNeedSelection(needs, 'Website');
-  assert.deepEqual(needs, ['3D / WebGL']);
+test('isValidInquiryEmail accepts valid emails and rejects malformed values', () => {
+  assert.equal(isValidInquiryEmail('name@company.com'), true);
+  assert.equal(isValidInquiryEmail('dor@pamidordesign.co'), true);
+  assert.equal(isValidInquiryEmail('not-an-email'), false);
+  assert.equal(isValidInquiryEmail('a@b'), false);
+  assert.equal(isValidInquiryEmail(''), false);
 });
 
-test('toggleBudgetSelection selects, switches, and clears budget choices', () => {
-  assert.equal(toggleBudgetSelection('', '$1–3k'), '$1–3k');
-  assert.equal(toggleBudgetSelection('$1–3k', '$3–7k'), '$3–7k');
-  assert.equal(toggleBudgetSelection('$3–7k', '$3–7k'), '');
+test('isValidInquiryPhone allows empty phone or valid international phone numbers', () => {
+  assert.equal(isValidInquiryPhone(''), true);
+  assert.equal(isValidInquiryPhone('+91 98765 43210'), true);
+  assert.equal(isValidInquiryPhone('+1 (415) 555-0199'), true);
+  assert.equal(isValidInquiryPhone('+91'), false);
+  assert.equal(isValidInquiryPhone('abc-12345'), false);
+  assert.equal(isValidInquiryPhone('1234567890123456789012345'), false);
 });
 
-test('validateProjectInquiry succeeds on valid complete and minimal payloads', () => {
-  const full = validateProjectInquiry({
-    name: 'Alex Rivera',
-    contact: '@alex_builds',
-    needs: ['Landing page', 'Animation'],
-    budget: '$1–3k',
-    details: 'Building an interactive product launch page for Q3 with Figma links ready.',
+test('validateContactInquiry succeeds on complete technical and minimal creative payloads', () => {
+  const techResult = validateContactInquiry({
+    name: 'Aarav Sharma',
+    email: 'aarav@studio.co',
+    phone: '+91 98765 43210',
+    reason: 'Freelance project',
+    message: 'Looking for an Android + backend engineer for a Q4 release.',
+    source: 'technical',
   });
-  assert.equal(full.ok, true);
-  assert.deepEqual(full.data, {
-    name: 'Alex Rivera',
-    contact: '@alex_builds',
-    needs: ['Landing page', 'Animation'],
-    budget: '$1–3k',
-    details: 'Building an interactive product launch page for Q3 with Figma links ready.',
+  assert.equal(techResult.ok, true);
+  assert.deepEqual(techResult.data, {
+    name: 'Aarav Sharma',
+    email: 'aarav@studio.co',
+    phone: '+91 98765 43210',
+    reason: 'Freelance project',
+    message: 'Looking for an Android + backend engineer for a Q4 release.',
+    source: 'technical',
     status: 'new',
   });
 
-  const minimal = validateProjectInquiry({
-    name: 'Sam',
-    contact: 'sam@example.com',
-    needs: [],
-    budget: '',
-    details: 'Need a clean website redesign in three weeks.',
+  const creativeResult = validateContactInquiry({
+    name: 'Maya Lin',
+    email: 'maya@brand.design',
+    phone: '',
+    reason: 'just saying Hii',
+    message: 'Loved the editorial visual studies!',
+    source: 'creative',
   });
-  assert.equal(minimal.ok, true);
-  assert.equal(minimal.data?.budget, '');
-  assert.deepEqual(minimal.data?.needs, []);
+  assert.equal(creativeResult.ok, true);
+  assert.equal(creativeResult.data?.phone, '');
+  assert.equal(creativeResult.data?.reason, 'just saying Hii');
+  assert.equal(creativeResult.data?.source, 'creative');
 });
 
-test('validateProjectInquiry rejects missing required fields, bad contact, and unknown options', () => {
-  const res = validateProjectInquiry({
+test('validateContactInquiry rejects missing required fields, bad phone, and unknown reason/source', () => {
+  const res = validateContactInquiry({
     name: 'A',
-    contact: 'invalid-contact',
-    needs: ['Unknown service'],
-    budget: '$999k',
-    details: 'Too short',
+    email: 'bad-email',
+    phone: 'phone-xyz',
+    reason: 'Unknown option',
+    message: 'Hi',
+    source: 'other' as 'technical',
   });
   assert.equal(res.ok, false);
   assert.ok(res.fieldErrors.name);
-  assert.ok(res.fieldErrors.contact);
-  assert.ok(res.fieldErrors.needs);
-  assert.ok(res.fieldErrors.budget);
-  assert.ok(res.fieldErrors.details);
-});
-
-test('PROJECT_NEED_OPTIONS and PROJECT_BUDGET_OPTIONS match exact prompt specification', () => {
-  assert.deepEqual(PROJECT_NEED_OPTIONS, [
-    'Landing page',
-    'Website',
-    '3D / WebGL',
-    'Game / playable',
-    'Animation',
-    'Other',
-  ]);
-  assert.deepEqual(PROJECT_BUDGET_OPTIONS, [
-    'under $1k',
-    '$1–3k',
-    '$3–7k',
-    '$7k+',
-    'Not sure yet',
-  ]);
+  assert.ok(res.fieldErrors.email);
+  assert.ok(res.fieldErrors.phone);
+  assert.ok(res.fieldErrors.reason);
+  assert.ok(res.fieldErrors.message);
+  assert.ok(res.errors.includes('Invalid form source.'));
 });

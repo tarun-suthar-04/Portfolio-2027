@@ -36,11 +36,11 @@ service cloud.firestore {
         val.matches('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
     }
 
-    function isValidContactHandle(val) {
-      return val is string &&
-        val.size() >= 4 &&
-        val.size() <= 120 &&
-        (isValidEmail(val) || val.matches('^@[a-zA-Z0-9_]{3,32}$'));
+    function isValidOptionalPhone(val) {
+      return val is string && (
+        val == '' ||
+        (val.size() >= 4 && val.size() <= 24 && val.matches('^[+0-9\\s()\\-]+$'))
+      );
     }
 
     function isHttpsUrl(val) {
@@ -258,21 +258,21 @@ service cloud.firestore {
 
     function isValidProjectInquiry(data) {
       return data.keys().hasAll([
-        'name', 'contact', 'needs', 'budget', 'details', 'status', 'createdAt'
+        'name', 'email', 'phone', 'reason', 'message', 'source', 'status', 'createdAt'
       ]) &&
       data.keys().hasOnly([
-        'name', 'contact', 'needs', 'budget', 'details', 'status', 'createdAt'
+        'name', 'email', 'phone', 'reason', 'message', 'source', 'status', 'createdAt'
       ]) &&
       data.name is string && data.name.size() >= 2 && data.name.size() <= 80 &&
-      isValidContactHandle(data.contact) &&
-      data.needs is list && data.needs.size() <= 6 &&
-      data.needs.hasOnly([
-        'Landing page', 'Website', '3D / WebGL', 'Game / playable', 'Animation', 'Other'
-      ]) &&
-      data.budget is string && data.budget.size() <= 20 &&
-      data.budget in ['', 'under $1k', '$1–3k', '$3–7k', '$7k+', 'Not sure yet'] &&
-      data.details is string && data.details.size() >= 10 && data.details.size() <= 2000 &&
-      data.status is string && data.status in ['new', 'reviewed', 'archived'] &&
+      isValidEmail(data.email) &&
+      isValidOptionalPhone(data.phone) &&
+      data.reason is string && data.reason.size() >= 4 && data.reason.size() <= 30 &&
+      data.reason in ['Freelance project', 'Enquiry', 'just saying Hii'] &&
+      data.message is string && data.message.size() >= 5 && data.message.size() <= 2000 &&
+      data.source is string && data.source.size() >= 8 && data.source.size() <= 16 &&
+      data.source in ['technical', 'creative'] &&
+      data.status is string && data.status.size() >= 3 && data.status.size() <= 16 &&
+      data.status in ['new', 'reviewed', 'archived'] &&
       data.createdAt is timestamp;
     }
 
@@ -419,7 +419,7 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Project contact inquiries (publicly creatable with strict validation; PII strictly admin-only for read/manage)
+    // Contact inquiries (publicly creatable with strict validation; PII strictly admin-only for read/manage)
     match /project_inquiries/{inquiryId} {
       allow get: if isVerifiedUser() && isValidId(inquiryId) && isAdmin();
       allow list: if isBootstrapAdmin();
