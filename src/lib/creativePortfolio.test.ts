@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  CREATIVE_CATEGORIES,
   CREATIVE_PLATFORM_LINKS,
   CREATIVE_TOOLKIT,
   CREATIVE_WORKS,
@@ -32,9 +33,10 @@ test('CREATIVE_PLATFORM_LINKS includes Fiverr, Portfolio, and social platforms w
 });
 
 test('CREATIVE_WORKS entries remain intact with valid categories and palettes', () => {
-  assert.equal(CREATIVE_WORKS.length, 9);
+  assert.equal(CREATIVE_WORKS.length, 33);
   for (const work of CREATIVE_WORKS) {
     assert.ok(work.title.length > 0);
-    assert.ok(work.palette.length >= 3);
+    assert.ok((CREATIVE_CATEGORIES as readonly string[]).includes(work.category));
+    assert.ok(work.palette.length === 0 || work.palette.length >= 3);
   }
 });

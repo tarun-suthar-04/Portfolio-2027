@@ -8,7 +8,6 @@ export interface ProjectViewportMetric {
   bottom: number;
   isIntersecting: boolean;
 }
-
 export interface ClampedPoint {
   x: number;
   y: number;
@@ -50,7 +49,7 @@ export function getEditorialLayoutSide(index: number): EditorialLayoutSide {
   return safe % 2 === 0 ? 'media-left' : 'media-right';
 }
 
-/** Return true if a project supports active case-study hover states and the "View case" badge. */
+/** Return true if a project supports active project hover states. */
 export function isProjectInteractive(
   project: Pick<ProjectItem, 'comingSoon' | 'disabled'>
 ): boolean {
@@ -122,12 +121,12 @@ export function buildProjectStripFrames(project: ProjectItem): ProjectStripFrame
       index: '01',
       tag: 'UI VIEW',
       title: `${project.title} Interface`,
-      caption: project.fileTypeLabel,
+      caption: project.platform,
       kind: 'screen-primary',
       imageSrc: project.previewImage,
       imageAlt: project.previewAlt,
       fallbackGradient: project.fallbackGradient,
-      fileName: project.fileName,
+      fileName: project.title,
     },
     {
       id: `${project.id}-architecture-flow`,
@@ -138,7 +137,7 @@ export function buildProjectStripFrames(project: ProjectItem): ProjectStripFrame
       kind: 'architecture-flow',
       fallbackGradient: project.fallbackGradient,
       flowSteps: flowSteps.length > 0 ? flowSteps : [project.title, project.platform],
-      fileName: project.fileName,
+      fileName: project.title,
     },
     {
       id: `${project.id}-screen-detail`,
@@ -150,7 +149,7 @@ export function buildProjectStripFrames(project: ProjectItem): ProjectStripFrame
       imageSrc: project.previewImage,
       imageAlt: `${project.title} workspace detail`,
       fallbackGradient: project.fallbackGradient,
-      fileName: project.fileName,
+      fileName: project.title,
     },
     {
       id: `${project.id}-layers-blueprint`,
@@ -161,19 +160,19 @@ export function buildProjectStripFrames(project: ProjectItem): ProjectStripFrame
       kind: 'layers-blueprint',
       fallbackGradient: project.fallbackGradient,
       layers: project.architecture.layers,
-      fileName: project.fileName,
+      fileName: project.title,
     },
     {
       id: `${project.id}-build-spec`,
       index: '05',
       tag: 'BUILD SPEC',
-      title: project.fileName,
+      title: `${project.title} details`,
       caption: project.subtitle,
       kind: 'build-spec',
       fallbackGradient: project.fallbackGradient,
       stack: project.stack,
       note: primaryNote,
-      fileName: project.fileName,
+      fileName: project.title,
     },
   ];
 }

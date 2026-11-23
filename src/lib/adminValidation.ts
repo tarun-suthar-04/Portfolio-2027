@@ -4,6 +4,7 @@ import type {
   MasonrySize,
   ProjectFileExt,
 } from '../data/portfolio';
+import { CREATIVE_CATEGORIES } from '../data/portfolio';
 
 export const BOOTSTRAP_ADMIN_EMAIL = 'ahirwalshiwani9@gmail.com';
 
@@ -20,11 +21,7 @@ export function isBootstrapAdminEmail(email?: string | null): boolean {
 }
 
 export const ALLOWED_FILE_EXTS: readonly ProjectFileExt[] = ['.apk', '.jar', '.py'];
-export const ALLOWED_CREATIVE_CATEGORIES: readonly CreativeCategory[] = [
-  'Direction',
-  'Motion & Frame',
-  'Concept',
-];
+export const ALLOWED_CREATIVE_CATEGORIES: readonly CreativeCategory[] = CREATIVE_CATEGORIES;
 export const ALLOWED_MASONRY_SIZES: readonly MasonrySize[] = ['tall', 'medium', 'compact'];
 export const ALLOWED_GLASS_THEMES: readonly GlassTheme[] = [
   'sunset',
@@ -116,8 +113,10 @@ export interface CreativeWorkPayloadInput {
   year: string;
   brief: string;
   promptApproach: string;
+  promptText?: string;
   palette: string[];
   featureImage?: string;
+  featureVideo?: string;
   published: boolean;
   sortOrder: number;
 }
@@ -136,7 +135,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const HEX_COLOR_RE = /^#[0-9a-fA-F]{3,8}$/;
 const SAFE_GRADIENT_RE = /^linear-gradient\([a-zA-Z0-9,#%.\s-]+\)$/;
 const LOCAL_SRC_IMG_RE = /^\/src\/assets\/images\/[a-zA-Z0-9._-]+$/;
-const LOCAL_PUBLIC_ASSET_RE = /^\/assets\/[a-zA-Z0-9._/-]+$/;
+const LOCAL_PUBLIC_ASSET_RE = /^\/(?:assets|work)\/[a-zA-Z0-9._/-]+$/;
 
 export function isValidDocId(id: string): boolean {
   return typeof id === 'string' && DOC_ID_RE.test(id);
@@ -193,6 +192,13 @@ export function isSafeCreativeFeatureImage(value: string): boolean {
     return /^[A-Za-z0-9+/=]+$/.test(parts[1]);
   }
   return isSafeImagePath(trimmed);
+}
+
+export function isSafeCreativeFeatureVideo(value: string): boolean {
+  const trimmed = value.trim();
+  if (trimmed === '') return true;
+  if (trimmed.startsWith('https://')) return isSafeHttpsUrl(trimmed);
+  return /^\/work\/[a-zA-Z0-9._-]+\.mp4$/.test(trimmed) && !trimmed.includes('..');
 }
 
 export function isSafeHexColor(value: string): boolean {
@@ -400,7 +406,7 @@ export function validateCreativeWorkPayload(
   const handle = checkString(errors, 'Handle', input.handle, 2, 60);
 
   if (!ALLOWED_CREATIVE_CATEGORIES.includes(input.category)) {
-    errors.push('Category must be Direction, Motion & Frame, or Concept.');
+    errors.push(`Category must be ${ALLOWED_CREATIVE_CATEGORIES.join(', ')}.`);
   }
 
   const subtitle = checkString(errors, 'Subtitle', input.subtitle, 2, 100);
@@ -417,11 +423,13 @@ export function validateCreativeWorkPayload(
   const year = checkString(errors, 'Year', input.year, 4, 20);
   const brief = checkString(errors, 'Direction brief', input.brief, 10, 420);
   const promptApproach = checkString(errors, 'Prompt approach', input.promptApproach, 10, 420);
+  const promptText = typeof input.promptText === 'string' ? input.promptText.trim() : '';
+  if (promptText.length > 8000) errors.push('Prompt text must be 8000 characters or fewer.');
 
   const palette = (Array.isArray(input.palette) ? input.palette : [])
     .map((c) => (typeof c === 'string' ? c.trim() : ''))
     .filter(Boolean);
-  if (palette.length < 3 || palette.length > 6) {
+  if (palette.length > 0 && (palette.length < 3 || palette.length > 6)) {
     errors.push('Color palette must contain 3 to 6 hex colors.');
   } else if (palette.some((c) => !isSafeHexColor(c))) {
     errors.push('Every palette color must be a valid hex value (e.g. #7c3aed).');
@@ -432,6 +440,10 @@ export function validateCreativeWorkPayload(
     errors.push(
       'Feature image must be an uploaded PNG/JPG/WebP image (under 250 KB compressed) or a valid https:// image URL.'
     );
+  }
+  const featureVideo = typeof input.featureVideo === 'string' ? input.featureVideo.trim() : '';
+  if (!isSafeCreativeFeatureVideo(featureVideo)) {
+    errors.push('Feature video must be a local /work/*.mp4 path or a valid https:// video URL.');
   }
 
   const sortOrder = Number(input.sortOrder);
@@ -457,8 +469,10 @@ export function validateCreativeWorkPayload(
       year,
       brief,
       promptApproach,
+      promptText,
       palette,
       featureImage,
+      featureVideo,
       published: Boolean(input.published),
       sortOrder: Math.round(sortOrder),
     },

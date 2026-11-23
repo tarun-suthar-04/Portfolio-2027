@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  CONTACT_DIRECT_EMAIL,
   CONTACT_REASON_OPTIONS,
   DEFAULT_CONTACT_REASON,
   isValidInquiryEmail,
@@ -9,19 +8,18 @@ import {
   validateContactInquiry,
 } from './contactInquiry';
 
-test('CONTACT_REASON_OPTIONS, default reason, and direct email match specification', () => {
+test('CONTACT_REASON_OPTIONS and default reason match specification', () => {
   assert.deepEqual(CONTACT_REASON_OPTIONS, [
     'Freelance project',
     'Enquiry',
     'just saying Hii',
   ]);
   assert.equal(DEFAULT_CONTACT_REASON, 'Freelance project');
-  assert.equal(CONTACT_DIRECT_EMAIL, 'dor@pamidordesign.co');
 });
 
 test('isValidInquiryEmail accepts valid emails and rejects malformed values', () => {
   assert.equal(isValidInquiryEmail('name@company.com'), true);
-  assert.equal(isValidInquiryEmail('dor@pamidordesign.co'), true);
+  assert.equal(isValidInquiryEmail('cdstarun1837@gmail.com'), true);
   assert.equal(isValidInquiryEmail('not-an-email'), false);
   assert.equal(isValidInquiryEmail('a@b'), false);
   assert.equal(isValidInquiryEmail(''), false);

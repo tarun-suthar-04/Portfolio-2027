@@ -9,7 +9,6 @@ import {
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import {
-  CONTACT_DIRECT_EMAIL,
   CONTACT_REASON_OPTIONS,
   DEFAULT_CONTACT_REASON,
   validateContactInquiry,
@@ -21,12 +20,14 @@ import {
 interface CreativeContactSectionProps {
   location: string;
   creativeYears: string;
+  contactEmail: string;
   onOpenAdmin: () => void;
 }
 
 export const CreativeContactSection: React.FC<CreativeContactSectionProps> = ({
   location,
   creativeYears,
+  contactEmail,
   onOpenAdmin,
 }) => {
   const [name, setName] = useState('');
@@ -111,10 +112,10 @@ export const CreativeContactSection: React.FC<CreativeContactSectionProps> = ({
             <p className="mt-5 mb-0 text-[15px] sm:text-[16px] leading-[1.6] text-[#4b5563]">
               Or just write:{' '}
               <a
-                href={`mailto:${CONTACT_DIRECT_EMAIL}`}
+                href={`mailto:${contactEmail}`}
                 className="font-medium text-[#141518] underline decoration-[#2563eb]/50 decoration-2 underline-offset-4 hover:text-[#2563eb] hover:decoration-[#2563eb] transition-colors break-all"
               >
-                {CONTACT_DIRECT_EMAIL}
+                {contactEmail}
               </a>
             </p>
           </div>

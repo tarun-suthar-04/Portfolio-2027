@@ -1,60 +1,33 @@
-# DESIGN.md — Dual-Persona Design System
+# Design system
 
-## 1. Core Philosophy: Two Sides, One Person
+The portfolio presents one person through distinct technical and creative views. Their visual styles stay separate, while the landing split and navigation connect them.
 
-Rather than blending an engineering resume and a visual arts portfolio into a diluted compromise, this system treats them as two sovereign worlds separated by a physical, tactile membrane:
+## Typography and shared tokens
 
-1. **The Threshold (`#land`)**: Dual-polarity split screen pairing a matte obsidian studio grid + cobalt `CubicMatrixCluster` (`#13151a`) on the Creative half with ruled architectural paper (`#f4f4f1`) and a neo-brutalist Engineering Snapshot card on the Technical half, bridged by `Tarun Suthar` rendered in `mix-blend-mode: difference` (`#ffffff`).
-2. **The Technical World (`#tech`)**: **Ruled-Paper Neo-Brutalism** — honest, structured, high-contrast engineering notebook aesthetics.
-3. **The Creative World (`#cre`)**: **Studio Grid & Cubic Pillow-Glass** — crisp off-white architectural grid (`#f7f8fa`), 3D-beveled frosted cubic matrices, and a matte charcoal masonry gallery of sleek white glass-orb cards.
+The shared font stack is Inter Tight for interface and display text, Instrument Serif for editorial italic accents, and JetBrains Mono for compact technical labels and numeric data. Global tokens live in `src/index.css`; view-specific styles are kept with their components and utility classes.
 
----
+## Landing split
 
-## 2. Typography Pairing
+The landing screen pairs a liquid-glass mosaic on the Creative side with ruled drafting paper and an animated macrodata field on the Technical side. A split seam, glass grip, and clipped name treatment connect the two halves. Clicking a half, dragging the seam, keyboard arrows, and touch gestures open a portfolio view.
 
-The system uses a deliberate **2 + 1** typographic stack loaded via Google Fonts:
+## Technical view
 
-| Role | Font Family | Weights | Usage |
-| :--- | :--- | :--- | :--- |
-| Primary Sans | `Inter Tight` | 300, 400, 500, 600, 700, 800 | Tight-tracked display headlines (`-0.06em`), Technical body copy, Creative manifesto (`300` weight) |
-| Editorial Serif | `Instrument Serif` | 400 Italic | Subtle humanist counterpoint on Creative persona titles (`AI Creative *Artist*`, `Tarun *Suthar*`) |
-| Monospace | `JetBrains Mono` | 400, 500, 700 | Technical labels, skill chips, dates, CGPAs (`tabular-nums`), and micro-indices |
+The Technical portfolio uses a warm light-paper canvas, subtle horizontal ruling, black borders, offset hard shadows, and signal-yellow highlights. Green and red distinguish other status accents. The Selected Projects section uses full-width ruled rows with a dynamic count, sequence number, large title and platform metadata, and a right-aligned summary. On fine-pointer desktop, hovering dims neighboring rows and reveals three staggered, project-specific preview panels; the active title gets a yellow fill sweep. A yellow, black-bordered folder-and-pointer badge follows the pointer. Project titles open the existing case-study view. There is no separate case-study button or always-visible detail image in each row.
 
----
+## Creative view and gallery
 
-## 3. Color Tokens
+The Creative view uses a light studio grid for its introduction, process, and toolkit sections. A dark plum manifesto panel and a charcoal visual-work section add contrast. Cubic glass clusters and restrained blue/violet accents provide visual continuity without importing the Technical view's hard-bordered card treatment.
 
-### Technical Side (`#tech`)
-- **Paper Canvas (`--paper`)**: `#f4f4f1` with `1px` horizontal ruling every `32px` (`rgba(17, 17, 17, 0.05)`)
-- **Card Surface**: `#f9faf9` / `#ffffff` with `1px solid #111111` borders and hard offset shadows (`4px 5px 0 #111111`)
-- **Primary Ink (`--ink`)**: `#111111`
-- **Highlight Accent (`--y`)**: `#ffc400` (divider bar, badge, name block, active buttons)
-- **Hands-on Proof (`--g`)**: `#0f5c3f`
-- **Active Learning / Marker (`--r`)**: `#c81e1e`
+The standalone Gallery uses a charcoal full-screen canvas, compact category filters, drifting horizontal media rows, and a lightbox for image and video work. Its controls support pointer/touch movement and wheel input; AI Portraits and AI Video items can expose a copy-prompt action when prompt text has been saved.
 
-### Creative Side (`#cre`) — Studio Grid & Cubic Glass
-- **Studio Canvas**: Crisp architectural off-white (`#f7f8fa`) with hairline `64px` square and `72px` vertical studio grid rules (`rgba(17, 17, 17, 0.048)`).
-- **Primary Ink**: Charcoal `#141518` paired with muted grey secondary phrases (`#7c828d`), electric cobalt (`#2563eb`), emerald (`#16a34a`), and violet (`#7c3aed`) accents.
-- **Gallery Stage (`#creative-work`)**: Matte charcoal `#1b1c20` masonry stage framing 9 crisp `#ffffff` `rounded-[26px]` glass-orb cards with titles, tags, and short descriptions.
+## Admin panel
 
----
+The admin uses a restrained light dashboard palette with a fixed desktop navigation rail, responsive navigation, status surfaces, tables/cards, and focused forms. The admin visual language is intentionally utilitarian so editing and review controls remain easy to scan.
 
-## 4. Signature Optical & Tactile Effects
+## Motion, input, and accessibility
 
-### Cubic Pillow-Glass Matrices (`.cubic-pillow` & `.orb-cubic-overlay`)
-Inspired by frosted geometric glass blocks refracting luminous gradients:
-- **Stepped Pillow Matrices (`CubicMatrixCluster`)**: Clusters of `8px`-radius square tiles with multi-stop specular inner bevels (`inset 1.5px 1.5px 4px rgba(255,255,255,0.85), inset -2px -2px 5px rgba(15,23,42,0.08)`) suspended above blurred radial gradient blooms (`emerald`, `cobalt`, `violet`).
-- **Glass Card Orbs (`GlassCardOrb`)**: Bright radial spheres rising from the lower frame of crisp white cards, refracted through a sharp `28px × 28px` frosted square grid with a soft top white fade.
-
-### Drag & Snap Physics
-- **Split Variable (`--p`)**: Normalized `0..1` value (`0.5` at rest).
-- **Commit Easing (`easeInOutCubic`)**: `380ms` smooth sweep to `0` (Creative) or `1` (Technical).
-- **Abort Spring (`easeOutBack`)**: `520ms` overshoot settle back to `0.5` when released shy of the threshold (`28%` desktop / `20%` mobile) without a flick (`> 0.5 px/ms`).
-
----
-
-## 5. Accessibility & Motion Safety
-
-- `inert` is dynamically applied to inactive `.view-layer` containers so screen readers and `Tab` focus remain strictly within the visible persona.
-- All interactive tiles, process rows, filter buttons, and modals use semantic `<button>` / `role="dialog"` markup with `Escape` close handlers.
-- `@media (prefers-reduced-motion: reduce)` disables ambient blob drift, asterisk rotation, and view transition delays, snapping `--p` instantaneously.
+- Split progress is normalized from `0` (Creative) to `1` (Technical); `src/lib/splitPhysics.ts` owns the thresholds and gesture outcome helpers.
+- The landing supports click, pointer drag, keyboard arrows, and touch. Technical and Creative scroll independently; overscrolling their top or bottom no longer returns to Landing. Use explicit navigation controls or Escape instead.
+- Gallery rows support dragging, swiping, wheel input, focusable work buttons, and keyboard movement.
+- Inactive top-level views use `inert`; interactive controls should remain semantic buttons or links with accessible names.
+- Honor `prefers-reduced-motion` when adding animations. Avoid relying on motion alone to communicate state.

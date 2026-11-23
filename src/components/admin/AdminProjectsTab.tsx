@@ -21,7 +21,6 @@ import {
 import type { ProjectFileExt } from '../../data/portfolio';
 import type { ManagedProjectItem } from '../../context/PortfolioDataContext';
 import {
-  ALLOWED_FILE_EXTS,
   slugifyDocId,
   validateProjectPayload,
 } from '../../lib/adminValidation';
@@ -35,15 +34,15 @@ interface AdminProjectsTabProps {
 
 const PREVIEW_PRESETS = [
   {
-    label: 'Order Analyzer (.apk)',
+    label: 'Order Analyzer',
     path: '/src/assets/images/project_order_analyzer_1795258265910.jpg',
   },
   {
-    label: 'Pixault (.jar)',
+    label: 'Pixault',
     path: '/src/assets/images/project_pixault_1795258346548.jpg',
   },
   {
-    label: 'Employee Manager (.py)',
+    label: 'Employee Manager',
     path: '/src/assets/images/project_employee_manager_1795258264291.jpg',
   },
 ];
@@ -107,7 +106,6 @@ export const AdminProjectsTab: React.FC<AdminProjectsTabProps> = ({
   onNotify,
 }) => {
   const [search, setSearch] = useState('');
-  const [extFilter, setExtFilter] = useState<'all' | ProjectFileExt>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all');
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -121,7 +119,6 @@ export const AdminProjectsTab: React.FC<AdminProjectsTabProps> = ({
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return projects.filter((p) => {
-      if (extFilter !== 'all' && p.fileExt !== extFilter) return false;
       if (statusFilter === 'published' && !p.published) return false;
       if (statusFilter === 'draft' && p.published) return false;
       if (!q) return true;
@@ -132,7 +129,7 @@ export const AdminProjectsTab: React.FC<AdminProjectsTabProps> = ({
         p.stack.some((s) => s.toLowerCase().includes(q))
       );
     });
-  }, [projects, search, extFilter, statusFilter]);
+  }, [projects, search, statusFilter]);
 
   const openCreateModal = () => {
     setEditingId(null);
@@ -185,7 +182,7 @@ export const AdminProjectsTab: React.FC<AdminProjectsTabProps> = ({
     const validated = validateProjectPayload({
       id: resolvedId,
       title: form.title,
-      fileName: form.fileName,
+      fileName: editingId ? form.fileName : `${resolvedId}${form.fileExt}`,
       fileExt: form.fileExt,
       fileTypeLabel: form.fileTypeLabel,
       fileAccent: form.fileAccent,
@@ -242,7 +239,7 @@ export const AdminProjectsTab: React.FC<AdminProjectsTabProps> = ({
           action: 'update',
           resourceType: 'projects',
           resourceId: clean.id,
-          summary: `Updated technical project "${clean.title}" (${clean.fileName})`,
+          summary: `Updated project "${clean.title}"`,
         });
         onNotify(`Updated project "${clean.title}".`);
       } else {
@@ -254,7 +251,7 @@ export const AdminProjectsTab: React.FC<AdminProjectsTabProps> = ({
           action: 'create',
           resourceType: 'projects',
           resourceId: clean.id,
-          summary: `Created technical project "${clean.title}" (${clean.fileName})`,
+          summary: `Created project "${clean.title}"`,
         });
         onNotify(`Created project "${clean.title}".`);
       }
@@ -308,7 +305,7 @@ export const AdminProjectsTab: React.FC<AdminProjectsTabProps> = ({
         action: 'delete',
         resourceType: 'projects',
         resourceId: project.id,
-        summary: `Deleted technical project "${project.title}" (${project.fileName})`,
+        summary: `Deleted project "${project.title}"`,
       });
       setConfirmDeleteId(null);
       onNotify(`Deleted "${project.title}".`);
@@ -333,24 +330,10 @@ export const AdminProjectsTab: React.FC<AdminProjectsTabProps> = ({
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search projects, files, stack..."
+              placeholder="Search projects..."
               className="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-400"
             />
           </div>
-
-          <select
-            aria-label="Filter by file extension"
-            value={extFilter}
-            onChange={(e) => setExtFilter(e.target.value as 'all' | ProjectFileExt)}
-            className="px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm text-slate-700 focus:outline-none focus:border-slate-400"
-          >
-            <option value="all">All file types</option>
-            {ALLOWED_FILE_EXTS.map((ext) => (
-              <option key={ext} value={ext}>
-                {ext}
-              </option>
-            ))}
-          </select>
 
           <select
             aria-label="Filter by publish status"
@@ -412,7 +395,7 @@ export const AdminProjectsTab: React.FC<AdminProjectsTabProps> = ({
                               <img
                                 src={project.previewImage}
                                 alt=""
-                                className="w-full h-full object-cover"
+                                className="w-full h-full object-contain"
                               />
                             )}
                           </div>
@@ -421,7 +404,6 @@ export const AdminProjectsTab: React.FC<AdminProjectsTabProps> = ({
                               {project.title}
                             </div>
                             <div className="font-mono-tech text-xs text-slate-500 flex items-center gap-2 mt-0.5">
-                              <span>{project.fileName}</span>
                               <a
                                 href={project.githubUrl}
                                 target="_blank"
@@ -437,7 +419,7 @@ export const AdminProjectsTab: React.FC<AdminProjectsTabProps> = ({
                         </div>
                       </td>
                       <td className="py-3.5 px-4">
-                        <div className="text-xs font-medium text-slate-800">{project.fileTypeLabel}</div>
+                        <div className="text-xs font-medium text-slate-800">{project.platform}</div>
                         <div className="text-xs text-slate-500 mt-0.5 truncate max-w-[220px]">
                           {project.stack.join(' · ')}
                         </div>
@@ -590,40 +572,7 @@ export const AdminProjectsTab: React.FC<AdminProjectsTabProps> = ({
                   />
                 </label>
 
-                <label className="block space-y-1">
-                  <span className="text-xs font-medium text-slate-700">File Name *</span>
-                  <input
-                    type="text"
-                    required
-                    maxLength={64}
-                    value={form.fileName}
-                    onChange={(e) => setForm((prev) => ({ ...prev, fileName: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 font-mono-tech text-xs text-slate-900"
-                    placeholder="order-analyzer.apk"
-                  />
-                </label>
-
                 <div className="grid grid-cols-2 gap-3">
-                  <label className="block space-y-1">
-                    <span className="text-xs font-medium text-slate-700">Extension *</span>
-                    <select
-                      value={form.fileExt}
-                      onChange={(e) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          fileExt: e.target.value as ProjectFileExt,
-                        }))
-                      }
-                      className="w-full px-3 py-2 rounded-lg border border-slate-200 text-slate-900"
-                    >
-                      {ALLOWED_FILE_EXTS.map((ext) => (
-                        <option key={ext} value={ext}>
-                          {ext}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
                   <label className="block space-y-1">
                     <span className="text-xs font-medium text-slate-700">Accent Hex *</span>
                     <input
@@ -636,19 +585,6 @@ export const AdminProjectsTab: React.FC<AdminProjectsTabProps> = ({
                     />
                   </label>
                 </div>
-
-                <label className="block space-y-1">
-                  <span className="text-xs font-medium text-slate-700">File Type Label *</span>
-                  <input
-                    type="text"
-                    required
-                    maxLength={40}
-                    value={form.fileTypeLabel}
-                    onChange={(e) => setForm((prev) => ({ ...prev, fileTypeLabel: e.target.value }))}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 text-slate-900"
-                    placeholder="Android App"
-                  />
-                </label>
 
                 <label className="block space-y-1">
                   <span className="text-xs font-medium text-slate-700">Platform *</span>

@@ -1,9 +1,9 @@
 import React, { useEffect } from 'react';
 import { Printer, X } from 'lucide-react';
+import { usePortfolioData } from '../context/PortfolioDataContext';
 import {
   CERTIFICATIONS,
   EDUCATION,
-  PORTFOLIO_PROFILE,
   PROJECTS,
   SKILL_GROUPS,
 } from '../data/portfolio';
@@ -14,6 +14,8 @@ interface ResumeModalProps {
 }
 
 export const ResumeModal: React.FC<ResumeModalProps> = ({ isOpen, onClose }) => {
+  const { profile } = usePortfolioData();
+
   useEffect(() => {
     if (!isOpen) return;
     const onKeyDown = (ev: KeyboardEvent) => {
@@ -44,10 +46,10 @@ export const ResumeModal: React.FC<ResumeModalProps> = ({ isOpen, onClose }) => 
         <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-[#111111] pb-4">
           <div>
             <h2 id="resume-modal-title" className="text-3xl font-extrabold tracking-[-0.04em]">
-              {PORTFOLIO_PROFILE.fullName}
+              {profile.fullName}
             </h2>
             <p className="font-mono-tech text-xs text-[#4b4f55] mt-1">
-              {PORTFOLIO_PROFILE.tech.role} · {PORTFOLIO_PROFILE.location} · {PORTFOLIO_PROFILE.email}
+              {profile.techRole} · {profile.location} · {profile.contactEmail}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -76,7 +78,7 @@ export const ResumeModal: React.FC<ResumeModalProps> = ({ isOpen, onClose }) => 
             Summary
           </h3>
           <p className="mt-1.5 text-sm leading-relaxed text-[#22252a]">
-            {PORTFOLIO_PROFILE.tech.bio}
+            {profile.techBio}
           </p>
         </section>
 

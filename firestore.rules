@@ -54,6 +54,7 @@ service cloud.firestore {
         !val.matches('.*\\.\\..*') &&
         (
           val.matches('^https://.*$') ||
+          val.matches('^/work/[a-zA-Z0-9._/\\-]+$') ||
           val.matches('^/src/assets/images/[a-zA-Z0-9._\\-]+$') ||
           val.matches('^/assets/[a-zA-Z0-9._/\\-]+$')
         );
@@ -70,6 +71,14 @@ service cloud.firestore {
           val.split(';base64,').size() == 2 &&
           val.split(';base64,')[0] in ['data:image/webp', 'data:image/jpeg', 'data:image/png']
         )
+      );
+    }
+
+    function isSafeCreativeFeatureVideo(val) {
+      return val is string && (
+        val == '' ||
+        (val.size() <= 400 && val.matches('^/work/[a-zA-Z0-9._\\-]+\\.mp4$')) ||
+        isHttpsUrl(val)
       );
     }
 
@@ -194,12 +203,13 @@ service cloud.firestore {
       data.keys().hasOnly([
         'index', 'title', 'handle', 'category', 'subtitle', 'shortDescription',
         'masonrySize', 'theme', 'medium', 'year', 'brief', 'promptApproach',
-        'palette', 'featureImage', 'published', 'sortOrder', 'updatedBy', 'createdAt', 'updatedAt'
+        'palette', 'featureImage', 'featureVideo', 'promptText', 'mediaWidth', 'mediaHeight',
+        'categoryCover', 'published', 'sortOrder', 'updatedBy', 'createdAt', 'updatedAt'
       ]) &&
       data.index is string && data.index.size() >= 1 && data.index.size() <= 6 &&
       data.title is string && data.title.size() >= 2 && data.title.size() <= 60 &&
       data.handle is string && data.handle.size() >= 2 && data.handle.size() <= 60 &&
-      data.category is string && data.category in ['Direction', 'Motion & Frame', 'Concept'] &&
+      data.category is string && data.category in ['AI Portraits', 'AI Video', 'Graphics', 'Video Editing', 'Experiments', 'Random', 'Direction', 'Motion & Frame', 'Concept'] &&
       data.subtitle is string && data.subtitle.size() >= 2 && data.subtitle.size() <= 100 &&
       data.shortDescription is string && data.shortDescription.size() >= 10 && data.shortDescription.size() <= 320 &&
       data.masonrySize is string && data.masonrySize in ['tall', 'medium', 'compact'] &&
@@ -208,9 +218,15 @@ service cloud.firestore {
       data.year is string && data.year.size() >= 4 && data.year.size() <= 20 &&
       data.brief is string && data.brief.size() >= 10 && data.brief.size() <= 420 &&
       data.promptApproach is string && data.promptApproach.size() >= 10 && data.promptApproach.size() <= 420 &&
-      data.palette is list && data.palette.size() >= 3 && data.palette.size() <= 6 &&
-      data.palette[0] is string && data.palette[0].matches('^#[0-9a-fA-F]{3,8}$') &&
+      data.palette is list && (data.palette.size() == 0 || (data.palette.size() >= 3 && data.palette.size() <= 6)) &&
+      (data.palette.size() == 0 || (data.palette[0] is string && data.palette[0].matches('^#[0-9a-fA-F]{3,8}$'))) &&
+      (!('categoryCover' in data) || data.categoryCover is bool) &&
       (!('featureImage' in data) || isSafeCreativeFeatureImage(data.featureImage)) &&
+      (!('featureVideo' in data) || isSafeCreativeFeatureVideo(data.featureVideo)) &&
+      (!('promptText' in data) || (data.promptText is string && data.promptText.size() <= 8000)) &&
+      ((!('mediaWidth' in data) && !('mediaHeight' in data)) ||
+        ('mediaWidth' in data && 'mediaHeight' in data && data.mediaWidth is number && data.mediaHeight is number &&
+          data.mediaWidth >= 1 && data.mediaWidth <= 8192 && data.mediaHeight >= 1 && data.mediaHeight <= 8192)) &&
       data.published is bool &&
       data.sortOrder is number && data.sortOrder >= 0 && data.sortOrder <= 9999 &&
       isValidId(data.updatedBy) &&
@@ -363,7 +379,8 @@ service cloud.firestore {
           (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly([
             'index', 'title', 'handle', 'category', 'subtitle', 'shortDescription',
             'masonrySize', 'theme', 'medium', 'year', 'brief', 'promptApproach',
-            'palette', 'featureImage', 'published', 'sortOrder', 'updatedBy', 'updatedAt'
+            'palette', 'featureImage', 'featureVideo', 'promptText', 'mediaWidth', 'mediaHeight',
+            'categoryCover', 'published', 'sortOrder', 'updatedBy', 'updatedAt'
           ])) ||
           // Action 2: Publish visibility toggle by admin
           (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly([

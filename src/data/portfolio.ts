@@ -1,3 +1,5 @@
+import WORK_FOLDER_WORKS from './workFolderWorks';
+
 export type SkillTierId = 'hands-on' | 'foundational' | 'learning' | 'ai-tools';
 
 export interface SkillGroup {
@@ -73,7 +75,15 @@ export interface LearningGoal {
   description: string;
 }
 
-export type CreativeCategory = 'Direction' | 'Motion & Frame' | 'Concept';
+export const CREATIVE_CATEGORIES = [
+  'AI Portraits',
+  'AI Video',
+  'Graphics',
+  'Video Editing',
+  'Experiments',
+  'Random',
+] as const;
+export type CreativeCategory = (typeof CREATIVE_CATEGORIES)[number];
 
 export type GlassTheme = 'sunset' | 'emerald' | 'violet' | 'cobalt' | 'amber' | 'orchid';
 
@@ -93,8 +103,13 @@ export interface CreativeWorkItem {
   year: string;
   brief: string;
   promptApproach: string;
+  promptText?: string;
   palette: string[];
   featureImage?: string;
+  featureVideo?: string;
+  categoryCover?: boolean;
+  mediaWidth?: number;
+  mediaHeight?: number;
 }
 
 export interface ProcessStep {
@@ -250,14 +265,14 @@ export const PROJECTS: ProjectItem[] = [
     fileExt: '.apk',
     fileTypeLabel: 'Android App',
     fileAccent: '#0f5c3f',
-    platform: 'Android · SQLite + Firestore',
+    platform: 'Android app',
     subtitle: 'Android app · Java',
     summary:
-      'Retail order tracker built for a real shop workflow — logs orders offline first, syncs to the cloud, and exports daily Excel/CSV summaries.',
+      'An Android app for recording shop orders offline, syncing them when internet returns, and exporting daily sales reports.',
     highlights: [
-      'Offline-first SQLite ledger for zero billing downtime',
-      'Firebase Auth & Firestore background sync',
-      'Apache POI spreadsheet parsing & daily CSV export',
+      'Record orders without an internet connection',
+      'Sync saved orders when the connection returns',
+      'Export daily sales reports',
     ],
     stack: ['Java', 'Android', 'SQLite', 'Firestore', 'Apache POI'],
     demonstrates: 'Local DB design · Cloud sync · Spreadsheet processing',
@@ -311,14 +326,14 @@ export const PROJECTS: ProjectItem[] = [
     fileExt: '.jar',
     fileTypeLabel: 'Desktop JavaFX',
     fileAccent: '#111111',
-    platform: 'Java 21 · AES-256 + LSB',
+    platform: 'Desktop app',
     subtitle: 'Desktop app · Java 21 + JavaFX',
     summary:
-      'Encrypts sensitive text with AES-256 and embeds it inside carrier images using randomized LSB steganography and OTP verification.',
+      'A desktop app that protects messages by encrypting them and hiding them inside images. Email verification controls access.',
     highlights: [
-      'PBKDF2 key derivation + AES-256 encryption + SHA-256 check',
-      'Randomized pixel-channel LSB steganography',
-      'MySQL user records & email OTP unlock gating',
+      'Encrypt messages before hiding them in an image',
+      'Recover hidden messages with the correct key',
+      'Verify users with an email code',
     ],
     stack: ['Java 21', 'JavaFX', 'MySQL', 'Maven'],
     demonstrates: 'Applied cryptography · Auth gating · Desktop UI',
@@ -372,14 +387,14 @@ export const PROJECTS: ProjectItem[] = [
     fileExt: '.py',
     fileTypeLabel: 'Python GUI',
     fileAccent: '#2563eb',
-    platform: 'Python · Tkinter + MySQL',
+    platform: 'Desktop app',
     subtitle: 'Desktop app · Python',
     summary:
-      'Clean desktop directory to add, search, update, and remove employee records directly against a relational MySQL database.',
+      'A desktop app for adding, finding, and updating employee records in one place.',
     highlights: [
-      'Parameterized SQL queries for safe CRUD mutations',
-      'Live Treeview employee table with instant refresh',
-      'Structured Tkinter form validation & record binding',
+      'Add, edit, remove, and search employee records',
+      'See changes in the employee list right away',
+      'Check entries before saving them',
     ],
     stack: ['Python', 'Tkinter', 'MySQL'],
     demonstrates: 'Python GUI · MySQL connector · Full CRUD',
@@ -474,8 +489,8 @@ export const CREATIVE_WORKS: CreativeWorkItem[] = [
     id: 'portraits',
     index: '01',
     title: 'PORTRAITS',
-    handle: '@tarunsuthar · Direction',
-    category: 'Direction',
+    handle: '@tarunsuthar · AI Portraits',
+    category: 'AI Portraits',
     subtitle: 'Atmospheric lighting & character mood',
     shortDescription:
       'AI-directed twilight portrait series balancing sculpted rim light, natural skin grain, and deep violet falloff.',
@@ -491,8 +506,8 @@ export const CREATIVE_WORKS: CreativeWorkItem[] = [
     id: 'geometric',
     index: '02',
     title: 'GEOMETRIC',
-    handle: '@tarunsuthar · Concept',
-    category: 'Concept',
+    handle: '@tarunsuthar · Experiments',
+    category: 'Experiments',
     subtitle: 'Architectural rhythm & balance',
     shortDescription:
       'Botanical emerald planes refracted through frosted cubic glass symmetry and calm orthographic framing.',
@@ -508,8 +523,8 @@ export const CREATIVE_WORKS: CreativeWorkItem[] = [
     id: 'kinetic-type',
     index: '03',
     title: 'KINETIC MOTION',
-    handle: '@tarunsuthar · Google Flow',
-    category: 'Motion & Frame',
+    handle: '@tarunsuthar · AI Video',
+    category: 'AI Video',
     subtitle: 'AI sequence pacing & visual rhythm',
     shortDescription:
       'Short-form visual loops combining Google Flow camera sweeps with crisp editorial typography cuts.',
@@ -525,8 +540,8 @@ export const CREATIVE_WORKS: CreativeWorkItem[] = [
     id: 'cinematic',
     index: '04',
     title: 'CINEMATIC',
-    handle: '@tarunsuthar · Motion',
-    category: 'Motion & Frame',
+    handle: '@tarunsuthar · AI Video',
+    category: 'AI Video',
     subtitle: 'Anamorphic heat & motion frames',
     shortDescription:
       'Widescreen narrative stills driven by tungsten-amber halation, dramatic silhouettes, and tense camera depth.',
@@ -542,8 +557,8 @@ export const CREATIVE_WORKS: CreativeWorkItem[] = [
     id: 'editorial',
     index: '05',
     title: 'EDITORIAL',
-    handle: '@tarunsuthar · Direction',
-    category: 'Direction',
+    handle: '@tarunsuthar · Graphics',
+    category: 'Graphics',
     subtitle: 'Warm monochrome & tactile grain',
     shortDescription:
       'Magazine-ready sandstone and amber light studies crafted for understated poise and tactile print contrast.',
@@ -559,8 +574,8 @@ export const CREATIVE_WORKS: CreativeWorkItem[] = [
     id: 'solar-stage',
     index: '06',
     title: 'PRODUCT STAGE',
-    handle: '@tarunsuthar · Commercial',
-    category: 'Direction',
+    handle: '@tarunsuthar · Experiments',
+    category: 'Experiments',
     subtitle: 'Minimalist studio hardware lighting',
     shortDescription:
       'Clean commercial object staging with warm horizon bounce light and distraction-free negative space.',
@@ -576,8 +591,8 @@ export const CREATIVE_WORKS: CreativeWorkItem[] = [
     id: 'characters',
     index: '07',
     title: 'CHARACTERS',
-    handle: '@tarunsuthar · Concept',
-    category: 'Concept',
+    handle: '@tarunsuthar · AI Portraits',
+    category: 'AI Portraits',
     subtitle: 'World-building & silhouette clarity',
     shortDescription:
       'Original character silhouettes lit by cool cobalt atmospheric fog and crisp directional key highlights.',
@@ -593,8 +608,8 @@ export const CREATIVE_WORKS: CreativeWorkItem[] = [
     id: 'botanical-glass',
     index: '08',
     title: 'BOTANICAL GLASS',
-    handle: '@tarunsuthar · Exploration',
-    category: 'Concept',
+    handle: '@tarunsuthar · Experiments',
+    category: 'Experiments',
     subtitle: 'Translucent flora & refractive light',
     shortDescription:
       'Macro botanical forms suspended behind fluted glass layers, blending organic gradients with crisp grid geometry.',
@@ -610,8 +625,8 @@ export const CREATIVE_WORKS: CreativeWorkItem[] = [
     id: 'advertising',
     index: '09',
     title: 'ADVERTISING',
-    handle: '@tarunsuthar · Motion',
-    category: 'Motion & Frame',
+    handle: '@tarunsuthar · Graphics',
+    category: 'Graphics',
     subtitle: 'High-impact campaign visuals',
     shortDescription:
       'Radiant orchid-to-magenta campaign frames engineered for bold social storytelling and visual recall.',
@@ -623,6 +638,7 @@ export const CREATIVE_WORKS: CreativeWorkItem[] = [
     promptApproach: 'Clean foreground subject separation, luminous gradient backdrops, and crisp typography-safe margins.',
     palette: ['#9333ea', '#e879f9', '#fbcfe8', '#fdf4ff'],
   },
+  ...WORK_FOLDER_WORKS,
 ];
 
 export const PROCESS_STEPS: ProcessStep[] = [

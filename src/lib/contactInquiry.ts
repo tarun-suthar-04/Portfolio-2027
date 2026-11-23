@@ -1,5 +1,3 @@
-export const CONTACT_DIRECT_EMAIL = 'dor@pamidordesign.co' as const;
-
 export const CONTACT_REASON_OPTIONS = [
   'Freelance project',
   'Enquiry',

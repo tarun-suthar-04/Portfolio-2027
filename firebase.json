@@ -1,0 +1,22 @@
+{
+  "firestore": [
+    {
+      "database": "ai-studio-portfolio2027-05839e76-5d68-494b-9e15-d2b2cce41db1",
+      "rules": "firestore.rules"
+    }
+  ],
+  "hosting": {
+    "public": "dist",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}

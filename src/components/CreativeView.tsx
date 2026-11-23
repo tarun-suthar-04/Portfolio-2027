@@ -8,9 +8,9 @@ import {
   PROCESS_STEPS,
 } from '../data/portfolio';
 import { usePortfolioData } from '../context/PortfolioDataContext';
-import { calculatePullProgress, SPLIT_CONFIG, ViewMode } from '../lib/splitPhysics';
-import { calculateMagneticOffset, clampFloatingPreview } from '../lib/magneticCard';
-import { CreativeLightbox } from './CreativeLightbox';
+import { GALLERY_CATEGORIES } from '../data/gallery';
+import { ViewMode } from '../lib/splitPhysics';
+import { clampFloatingPreview } from '../lib/magneticCard';
 import { CreativeToolLogo, PlatformBrandLogo } from './CreativeBrandLogos';
 import { CubicMatrixCluster, GlassCardOrb } from './CubicGlassGrid';
 import { ProcessPreviewArt } from './CreativeArtwork';
@@ -21,6 +21,7 @@ interface CreativeViewProps {
   onReturnLanding: () => void;
   onSwitchTechnical: () => void;
   onOpenAdmin: () => void;
+  onOpenGallery: (category?: CreativeCategory | null) => void;
 }
 
 // 5x5 vibrant lime-emerald cubic block (Image 1 & Image 3 style)
@@ -55,17 +56,13 @@ export const CreativeView: React.FC<CreativeViewProps> = ({
   onReturnLanding,
   onSwitchTechnical,
   onOpenAdmin,
+  onOpenGallery,
 }) => {
   const { profile, platformLinks, creativeWorks } = usePortfolioData();
   const scrollRef = useRef<HTMLDivElement | null>(null);
-  const accRef = useRef<number>(0);
-  const touchYRef = useRef<number>(0);
   const manifestoSectionRef = useRef<HTMLElement | null>(null);
   const manifestoPreviewRef = useRef<HTMLDivElement | null>(null);
 
-  const [pullProgress, setPullProgress] = useState(0);
-  const [selectedCategory, setSelectedCategory] = useState<'All' | CreativeCategory>('All');
-  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [activeStepIndex, setActiveStepIndex] = useState<number>(0);
   const [activeToolName, setActiveToolName] = useState<string>(CREATIVE_TOOLKIT[0].name);
   const [hoveredWord, setHoveredWord] = useState<ManifestoWordKey | null>(null);
@@ -77,8 +74,6 @@ export const CreativeView: React.FC<CreativeViewProps> = ({
   useEffect(() => {
     if (activeView === 'cre' && scrollRef.current) {
       scrollRef.current.scrollTop = 0;
-      accRef.current = 0;
-      setPullProgress(0);
     }
   }, [activeView]);
 
@@ -113,46 +108,9 @@ export const CreativeView: React.FC<CreativeViewProps> = ({
     });
   }, [activeView]);
 
-  // Overscroll top-to-landing gesture
+  // Keep Escape as a keyboard route back to Landing.
   useEffect(() => {
     if (activeView !== 'cre') return;
-    const el = scrollRef.current;
-    if (!el) return;
-
-    const atTop = () => el.scrollTop <= 0;
-
-    const pushDelta = (dy: number, threshold: number) => {
-      if (lightboxIndex !== null) return;
-      if (atTop() && dy < 0) {
-        accRef.current -= dy;
-        setPullProgress(calculatePullProgress(accRef.current, threshold));
-        if (accRef.current > threshold) {
-          accRef.current = 0;
-          setPullProgress(0);
-          onReturnLanding();
-        }
-      } else if (accRef.current !== 0) {
-        accRef.current = 0;
-        setPullProgress(0);
-      }
-    };
-
-    const onWheel = (ev: WheelEvent) => {
-      pushDelta(ev.deltaY, SPLIT_CONFIG.creReturnThreshold);
-    };
-
-    const onTouchStart = (ev: TouchEvent) => {
-      touchYRef.current = ev.touches[0]?.clientY ?? 0;
-      accRef.current = 0;
-      setPullProgress(0);
-    };
-
-    const onTouchMove = (ev: TouchEvent) => {
-      const y = ev.touches[0]?.clientY ?? touchYRef.current;
-      pushDelta(touchYRef.current - y, 110);
-      touchYRef.current = y;
-    };
-
     const onKeyDown = (ev: KeyboardEvent) => {
       if (ev.key === 'Escape') {
         if (pinnedWord !== null || hoveredWord !== null) {
@@ -160,24 +118,16 @@ export const CreativeView: React.FC<CreativeViewProps> = ({
           setHoveredWord(null);
           return;
         }
-        if (lightboxIndex === null) {
-          onReturnLanding();
-        }
+        onReturnLanding();
       }
     };
 
-    el.addEventListener('wheel', onWheel, { passive: true });
-    el.addEventListener('touchstart', onTouchStart, { passive: true });
-    el.addEventListener('touchmove', onTouchMove, { passive: true });
     window.addEventListener('keydown', onKeyDown);
 
     return () => {
-      el.removeEventListener('wheel', onWheel);
-      el.removeEventListener('touchstart', onTouchStart);
-      el.removeEventListener('touchmove', onTouchMove);
       window.removeEventListener('keydown', onKeyDown);
     };
-  }, [activeView, onReturnLanding, lightboxIndex, pinnedWord, hoveredWord]);
+  }, [activeView, onReturnLanding, pinnedWord, hoveredWord]);
 
   const scrollToSection = (ev: React.MouseEvent<HTMLAnchorElement>, sectionId: string) => {
     ev.preventDefault();
@@ -185,25 +135,6 @@ export const CreativeView: React.FC<CreativeViewProps> = ({
     if (!target) return;
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     target.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
-  };
-
-  const resetCardMagnetic = (el: HTMLButtonElement) => {
-    el.style.setProperty('--mag-x', '0px');
-    el.style.setProperty('--mag-y', '0px');
-  };
-
-  const handleCardPointerMove = (ev: React.PointerEvent<HTMLButtonElement>) => {
-    if (ev.pointerType === 'touch') return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const el = ev.currentTarget;
-    const { x, y } = calculateMagneticOffset(
-      ev.clientX,
-      ev.clientY,
-      el.getBoundingClientRect(),
-      7
-    );
-    el.style.setProperty('--mag-x', `${x}px`);
-    el.style.setProperty('--mag-y', `${y}px`);
   };
 
   const updateManifestoPreviewPos = (clientX: number, clientY: number) => {
@@ -267,10 +198,15 @@ export const CreativeView: React.FC<CreativeViewProps> = ({
     );
   };
 
-  const filteredWorks =
-    selectedCategory === 'All'
-      ? creativeWorks
-      : creativeWorks.filter((item) => item.category === selectedCategory);
+  const categoryCovers = GALLERY_CATEGORIES.map(({ id }) => {
+    const categoryWorks = creativeWorks.filter((work) => work.category === id);
+    return {
+      category: id,
+      cover: categoryWorks.find((work) => work.categoryCover && work.featureImage)
+        ?? categoryWorks.find((work) => work.featureImage)
+        ?? null,
+    };
+  });
 
   const activeStep = PROCESS_STEPS[activeStepIndex] ?? PROCESS_STEPS[0];
   const activeTool =
@@ -284,23 +220,13 @@ export const CreativeView: React.FC<CreativeViewProps> = ({
       inert={activeView !== 'cre'}
       aria-label="Creative Portfolio"
     >
-      {/* Top overscroll progress cue */}
-      {pullProgress > 0.05 && (
-        <div
-          className="fixed top-0 left-0 right-0 z-30 h-1 bg-black/10 pointer-events-none"
-          aria-hidden="true"
-        >
-          <div
-            className="h-full bg-[#2563eb] transition-[width] duration-75"
-            style={{ width: `${Math.round(pullProgress * 100)}%` }}
-          />
-        </div>
-      )}
-
       {/* Floating Bottom Navigation */}
       <nav className="floating-nav-group bot" aria-label="Creative view navigation">
         <button type="button" className="nav-chip-cre" onClick={onReturnLanding}>
           ↑ Landing
+        </button>
+        <button type="button" className="nav-chip-cre" onClick={() => onOpenGallery(null)}>
+          Gallery
         </button>
         <button type="button" className="nav-chip-cre" onClick={onSwitchTechnical}>
           Technical →
@@ -341,6 +267,7 @@ export const CreativeView: React.FC<CreativeViewProps> = ({
               >
                 Process
               </a>
+              <button type="button" onClick={() => onOpenGallery(null)} className="text-[#374151] hover:text-[#141518] bg-transparent border-0 p-0 font-inherit text-[15px] font-medium cursor-pointer transition-colors whitespace-nowrap shrink-0">Gallery</button>
               <a
                 href="#creative-toolkit"
                 onClick={(ev) => scrollToSection(ev, 'creative-toolkit')}
@@ -402,6 +329,14 @@ export const CreativeView: React.FC<CreativeViewProps> = ({
               </p>
 
               <div className="cre-rv on mt-8 flex flex-wrap items-center gap-6 text-sm font-semibold text-[#141518]">
+                <a
+                  href="#gallery"
+                  onClick={(ev) => { ev.preventDefault(); onOpenGallery(null); }}
+                  className="inline-flex items-center gap-1.5 text-[#141518] no-underline border-b border-[#141518] pb-0.5 hover:text-[#2563eb] hover:border-[#2563eb] transition-colors"
+                >
+                  <span>Open the gallery</span>
+                  <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
+                </a>
                 <a
                   href="#creative-work"
                   onClick={(ev) => scrollToSection(ev, 'creative-work')}
@@ -475,7 +410,7 @@ export const CreativeView: React.FC<CreativeViewProps> = ({
                         [activeWordMedia.key]: true,
                       }))
                     }
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-contain"
                   />
                 )}
               </div>
@@ -516,7 +451,7 @@ export const CreativeView: React.FC<CreativeViewProps> = ({
                         [activeWordMedia.key]: true,
                       }))
                     }
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-contain"
                   />
                 )}
               </div>
@@ -531,12 +466,12 @@ export const CreativeView: React.FC<CreativeViewProps> = ({
         </div>
       </section>
 
-      {/* SECTION 3: My Visual Works Gallery */}
+      {/* SECTION 3: Category cover gallery */}
       <section
         id="creative-work"
         className="bg-[#1b1c20] text-white px-5 sm:px-10 lg:px-16 py-20 lg:py-28"
       >
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           <div className="cre-rv flex flex-col md:flex-row md:items-end justify-between gap-6 pb-10 border-b border-white/10">
             <div>
               <h2 className="text-3xl md:text-5xl font-semibold tracking-[-0.04em] text-white m-0">
@@ -546,96 +481,47 @@ export const CreativeView: React.FC<CreativeViewProps> = ({
                 </span>
               </h2>
             </div>
-
-            {/* Category Filter Tabs */}
-            <div
-              className="flex flex-wrap items-center gap-1.5 bg-white/5 p-1.5 rounded-xl border border-white/10"
-              role="group"
-              aria-label="Filter visual works by category"
+            <button
+              type="button"
+              onClick={() => onOpenGallery(null)}
+              className="inline-flex items-center justify-center gap-2 border border-white/30 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:border-[#93c5fd] hover:text-[#93c5fd] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#93c5fd]"
             >
-              {(['All', 'Direction', 'Motion & Frame', 'Concept'] as const).map((cat) => {
-                const active = selectedCategory === cat;
-                return (
-                  <button
-                    key={cat}
-                    type="button"
-                    aria-pressed={active}
-                    onClick={() => setSelectedCategory(cat)}
-                    className={`px-3.5 py-2 rounded-lg text-xs font-medium cursor-pointer transition-colors whitespace-nowrap ${
-                      active
-                        ? 'bg-white text-[#141518]'
-                        : 'text-[#d1d5db] hover:text-white hover:bg-white/5'
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                );
-              })}
-            </div>
+              Enter Gallery
+              <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+            </button>
           </div>
 
-          {/* Masonry-Style Glassmorphic Gallery */}
-          <div className="mt-10 columns-1 md:columns-2 lg:columns-3 gap-7">
-            {filteredWorks.map((work) => {
-              const globalIndex = creativeWorks.findIndex((item) => item.id === work.id);
-              const orbHeightClass =
-                work.masonrySize === 'tall'
-                  ? 'h-[260px]'
-                  : work.masonrySize === 'medium'
-                    ? 'h-[205px]'
-                    : 'h-[155px]';
-
-              return (
-                <button
-                  key={work.id}
-                  type="button"
-                  onClick={(ev) => {
-                    resetCardMagnetic(ev.currentTarget);
-                    setLightboxIndex(globalIndex);
-                  }}
-                  onPointerMove={handleCardPointerMove}
-                  onPointerLeave={(ev) => resetCardMagnetic(ev.currentTarget)}
-                  aria-label={`Open ${work.title}`}
-                  className="group sleek-glass-card break-inside-avoid mb-7 w-full text-left flex flex-col justify-between cursor-pointer p-0 border-0"
-                >
-                  <div className="relative z-10 p-6 pb-3 w-full bg-white/85 backdrop-blur-md">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[19px] font-bold tracking-[-0.03em] text-[#141518]">
-                        {work.title}
-                      </span>
-                      <span className="inline-flex items-center gap-1 font-mono-tech text-[11px] text-[#6b7280] shrink-0">
-                        <span>{work.index}</span>
-                        <ArrowUpRight className="w-3.5 h-3.5 text-[#9ca3af]" aria-hidden="true" />
-                      </span>
-                    </div>
-                    <div className="mt-0.5 text-xs text-[#6b7280]">{work.category}</div>
-                    <p className="mt-2.5 text-[13.5px] text-[#374151] leading-relaxed m-0">
-                      {work.shortDescription}
-                    </p>
-                  </div>
-
-                  {work.featureImage && !failedWorkImages[`${work.id}:${work.featureImage}`] ? (
-                    <div className={`relative w-full ${orbHeightClass} overflow-hidden bg-[#141518]`}>
-                      <img
-                        src={work.featureImage}
-                        alt={`${work.title} — ${work.subtitle}`}
-                        loading="lazy"
-                        referrerPolicy="no-referrer"
-                        onError={() =>
-                          setFailedWorkImages((prev) => ({
-                            ...prev,
-                            [`${work.id}:${work.featureImage}`]: true,
-                          }))
-                        }
-                        className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
-                      />
-                    </div>
-                  ) : (
-                    <GlassCardOrb theme={work.theme} className={`w-full ${orbHeightClass}`} />
-                  )}
-                </button>
-              );
-            })}
+          <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5" aria-label="Browse visual work categories">
+            {categoryCovers.map(({ category, cover }) => (
+              <button
+                key={category}
+                type="button"
+                onClick={() => onOpenGallery(category)}
+                aria-label={`Open ${category} gallery`}
+                className="creative-category-card group relative block w-full aspect-[4/3] overflow-hidden border border-white/15 bg-[#141518] p-0 text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#93c5fd] focus-visible:ring-offset-4 focus-visible:ring-offset-[#1b1c20]"
+              >
+                {cover?.featureImage && !failedWorkImages[`${cover.id}:${cover.featureImage}`] ? (
+                  <img
+                    src={cover.featureImage}
+                    alt={`${category} cover artwork`}
+                    loading="lazy"
+                    decoding="async"
+                    referrerPolicy="no-referrer"
+                    onError={() => setFailedWorkImages((prev) => ({
+                      ...prev,
+                      [`${cover.id}:${cover.featureImage}`]: true,
+                    }))}
+                    className="absolute inset-0 w-full h-full object-contain"
+                  />
+                ) : (
+                  <GlassCardOrb theme={cover?.theme ?? 'cobalt'} className="absolute inset-0 w-full h-full" />
+                )}
+                <span className="creative-category-title absolute inset-x-0 bottom-0 flex items-center justify-between gap-3 px-5 py-4 bg-gradient-to-t from-[#111215]/95 via-[#111215]/80 to-transparent text-white text-[20px] sm:text-[22px] font-semibold tracking-[-0.02em] opacity-0 translate-y-2 transition-[opacity,transform] duration-200 group-hover:opacity-100 group-hover:translate-y-0 group-focus-visible:opacity-100 group-focus-visible:translate-y-0">
+                  {category}
+                  <ArrowUpRight className="w-5 h-5 text-[#93c5fd] shrink-0" aria-hidden="true" />
+                </span>
+              </button>
+            ))}
           </div>
         </div>
       </section>
@@ -796,6 +682,7 @@ export const CreativeView: React.FC<CreativeViewProps> = ({
             <CreativeContactSection
               location={profile.location}
               creativeYears={profile.creativeYears}
+              contactEmail={profile.contactEmail}
               onOpenAdmin={onOpenAdmin}
             />
 
@@ -837,12 +724,6 @@ export const CreativeView: React.FC<CreativeViewProps> = ({
         </div>
       </section>
 
-      <CreativeLightbox
-        works={creativeWorks}
-        activeIndex={lightboxIndex}
-        onClose={() => setLightboxIndex(null)}
-        onSelectIndex={(idx) => setLightboxIndex(idx)}
-      />
     </div>
   );
 };

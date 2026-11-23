@@ -1,5 +1,16 @@
 # CHANGELOG.md
 
+## Unreleased — Gallery, live content, and admin updates
+
+- Reworked Technical Selected Projects into ruled, keyboard-accessible project rows with a dynamic count, active-title highlight, project-specific desktop hover previews, and a yellow folder-style pointer badge. Project-title navigation continues to use the existing case-study route; the separate detail button and always-visible row preview were removed.
+- Removed edge-overscroll navigation from Technical and Creative views. Users return to Landing with explicit navigation or Escape.
+- Added a dedicated `#gallery` view with category filters, continuously moving media rows, pointer/touch/wheel navigation, and an image/video lightbox.
+- Added bundled media and metadata from `public/work/` through `src/data/workFolderWorks.ts`; creative work records remain the shared input to both the Creative work section and Gallery.
+- Added project detail URLs at `#tech/project/<id>` with screenshots, project summaries, feature lists, and adjacent-project navigation.
+- Connected profile, published project, and published creative-work data to Firestore listeners with bundled portfolio data as the fallback.
+- Added the Firebase-backed admin areas for projects, creative works, inquiries, profile/links, and security/access.
+- Centralized the contact email on the profile data and used it for the portfolio contact forms.
+
 ## v2.2.0 — Masonry AI Visual Gallery & Landing Split Redesign
 
 ### Landing Split Redesign (`#land` & `LandingSplit.tsx`)

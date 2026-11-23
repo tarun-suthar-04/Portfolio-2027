@@ -1,175 +1,170 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
-import { ArrowUpRight } from 'lucide-react';
+import { FolderOpen, MousePointer2 } from 'lucide-react';
 import { ProjectItem } from '../data/portfolio';
-import {
-  isProjectInteractive,
-  lerpValue,
-} from '../lib/editorialProjects';
+import { formatProjectIndex, isProjectInteractive, lerpValue } from '../lib/editorialProjects';
 import { buildProjectHash } from '../lib/projectCaseStudy';
 import { ProjectHoverMediaStrip } from './ProjectHoverMediaStrip';
-import { ProjectModalTab } from './ProjectModal';
 
 interface EditorialProjectsSectionProps {
   projects: readonly ProjectItem[];
   scrollContainerRef: React.RefObject<HTMLDivElement | null>;
   isActive: boolean;
-  onOpenModal?: (project: ProjectItem, initialTab: ProjectModalTab) => void;
   onOpenProject: (project: ProjectItem) => void;
 }
 
 const EDITORIAL_EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+const DESKTOP_HOVER_QUERY = '(hover: hover) and (pointer: fine) and (min-width: 801px)';
 
 interface EditorialProjectRowProps {
   project: ProjectItem;
   index: number;
   isLast: boolean;
+  isActiveRow: boolean;
+  isHovered: boolean;
   scrollContainerRef: React.RefObject<HTMLDivElement | null>;
   isActiveView: boolean;
+  prefersReduced: boolean;
   onOpenProject: (project: ProjectItem) => void;
+  onProjectHover: (projectId: string | null) => void;
   onBadgeUpdate: (visible: boolean, clientX: number, clientY: number) => void;
+  registerRow: (projectId: string, node: HTMLElement | null) => void;
 }
 
 const EditorialProjectRow: React.FC<EditorialProjectRowProps> = ({
   project,
   index,
   isLast,
+  isActiveRow,
+  isHovered,
   scrollContainerRef,
   isActiveView,
+  prefersReduced,
   onOpenProject,
+  onProjectHover,
   onBadgeUpdate,
+  registerRow,
 }) => {
-  const prefersReduced = useReducedMotion();
   const articleRef = useRef<HTMLElement | null>(null);
-  const pointerRatioRef = useRef<number>(0);
-
-  const [isRevealed, setIsRevealed] = useState<boolean>(() => Boolean(prefersReduced));
-  const [rowHovered, setRowHovered] = useState(false);
-
+  const [isRevealed, setIsRevealed] = useState(prefersReduced);
   const interactive = isProjectInteractive(project);
   const projectHash = buildProjectHash(project.id);
 
   useEffect(() => {
-    if (prefersReduced) {
-      setIsRevealed(true);
-    }
+    if (prefersReduced) setIsRevealed(true);
   }, [prefersReduced]);
 
-  // Collapse hover states when leaving the Technical view
   useEffect(() => {
-    if (!isActiveView && rowHovered) {
-      setRowHovered(false);
-      onBadgeUpdate(false, 0, 0);
-    }
-  }, [isActiveView, rowHovered, onBadgeUpdate]);
-
-  // Subtle viewport entrance anchored to #tech's scroll container
-  useEffect(() => {
-    if (prefersReduced || isRevealed) return;
-    if (!isActiveView) return;
     const node = articleRef.current;
+    if (!node || !isActiveView || isRevealed || prefersReduced) return;
     const root = scrollContainerRef.current;
-    if (!node) return;
-
-    const checkInView = () => {
+    const isInRange = () => {
       const nodeRect = node.getBoundingClientRect();
-      const rootRect = root
-        ? root.getBoundingClientRect()
-        : { top: 0, bottom: window.innerHeight };
-      if (nodeRect.top <= rootRect.bottom + 140 && nodeRect.bottom >= rootRect.top - 140) {
-        setIsRevealed(true);
-        return true;
-      }
-      return false;
+      const rootRect = root?.getBoundingClientRect() ?? { top: 0, bottom: window.innerHeight };
+      return nodeRect.top <= rootRect.bottom + 140 && nodeRect.bottom >= rootRect.top - 140;
     };
 
-    if (checkInView() || typeof IntersectionObserver === 'undefined') {
+    if (isInRange() || typeof IntersectionObserver === 'undefined') {
       setIsRevealed(true);
       return;
     }
 
     const observer = new IntersectionObserver(
       (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting || entry.intersectionRatio > 0) {
-            setIsRevealed(true);
-            observer.disconnect();
-            break;
-          }
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setIsRevealed(true);
+          observer.disconnect();
         }
       },
-      {
-        root: root ?? null,
-        rootMargin: '140px 0px 140px 0px',
-        threshold: 0.01,
-      }
+      { root: root ?? null, rootMargin: '140px 0px 140px 0px', threshold: 0.01 }
     );
-
     observer.observe(node);
     return () => observer.disconnect();
   }, [isActiveView, isRevealed, prefersReduced, scrollContainerRef]);
 
-  const updatePointerRatio = (clientX: number) => {
-    const node = articleRef.current;
-    if (!node) return;
-    const rect = node.getBoundingClientRect();
-    if (rect.width <= 0) return;
-    pointerRatioRef.current = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+  const setArticleRef = useCallback(
+    (node: HTMLElement | null) => {
+      articleRef.current = node;
+      registerRow(project.id, node);
+    },
+    [project.id, registerRow]
+  );
+
+  useEffect(() => {
+    if (!isActiveView && isHovered) {
+      onProjectHover(null);
+      onBadgeUpdate(false, 0, 0);
+    }
+  }, [isActiveView, isHovered, onBadgeUpdate, onProjectHover]);
+
+  const supportsDesktopHover = () =>
+    typeof window !== 'undefined' && window.matchMedia(DESKTOP_HOVER_QUERY).matches;
+
+  const handlePointerEnter = (event: React.PointerEvent<HTMLElement>) => {
+    if (!interactive || event.pointerType !== 'mouse' || !supportsDesktopHover()) return;
+    onProjectHover(project.id);
+    onBadgeUpdate(!prefersReduced, event.clientX, event.clientY);
   };
 
-  const handleRowPointerEnter = (ev: React.PointerEvent<HTMLElement>) => {
-    if (!interactive || ev.pointerType !== 'mouse') return;
-    updatePointerRatio(ev.clientX);
-    setRowHovered(true);
-    onBadgeUpdate(!prefersReduced, ev.clientX, ev.clientY);
+  const handlePointerMove = (event: React.PointerEvent<HTMLElement>) => {
+    if (!interactive || event.pointerType !== 'mouse' || !supportsDesktopHover()) return;
+    onBadgeUpdate(!prefersReduced, event.clientX, event.clientY);
   };
 
-  const handleRowPointerMove = (ev: React.PointerEvent<HTMLElement>) => {
-    if (!interactive || ev.pointerType !== 'mouse') return;
-    updatePointerRatio(ev.clientX);
-    if (!rowHovered) setRowHovered(true);
-    onBadgeUpdate(!prefersReduced, ev.clientX, ev.clientY);
-  };
-
-  const handleRowPointerLeave = () => {
-    setRowHovered(false);
+  const handlePointerLeave = () => {
+    onProjectHover(null);
     onBadgeUpdate(false, 0, 0);
   };
 
-  const handleOpenCaseStudy = (ev: React.MouseEvent<HTMLAnchorElement>) => {
-    if (!interactive) {
-      ev.preventDefault();
-      return;
-    }
-    if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey || ev.button !== 0) return;
-    ev.preventDefault();
-    setRowHovered(false);
+  const handleOpenCaseStudy = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+    event.preventDefault();
+    onProjectHover(null);
     onBadgeUpdate(false, 0, 0);
     onOpenProject(project);
   };
 
-  const revealDuration = prefersReduced ? 0 : 0.42;
+  const handleSpaceActivation = (event: React.KeyboardEvent<HTMLAnchorElement>) => {
+    if (event.key !== ' ' || !interactive) return;
+    event.preventDefault();
+    onProjectHover(null);
+    onBadgeUpdate(false, 0, 0);
+    onOpenProject(project);
+  };
+
+  const headingContents = (
+    <>
+      <span className="editorial-project-index" aria-hidden="true">
+        {formatProjectIndex(index)}
+      </span>
+      <h3 id={`editorial-project-title-${project.id}`}>
+        <span className="editorial-project-title-text">{project.title}</span>
+        {project.subtitle && <small>{project.subtitle}</small>}
+      </h3>
+      <p className="editorial-project-summary">{project.summary}</p>
+    </>
+  );
 
   return (
     <article
-      ref={articleRef}
+      ref={setArticleRef}
       id={`project-${project.id}`}
       data-testid={`editorial-project-${project.id}`}
-      data-hovered={rowHovered ? 'true' : 'false'}
-      onPointerEnter={handleRowPointerEnter}
-      onPointerMove={handleRowPointerMove}
-      onPointerLeave={handleRowPointerLeave}
-      className={`editorial-project-row py-8 sm:py-10 lg:py-11 border-t border-[#111111]/25 ${
-        isLast ? 'border-b border-[#111111]/25' : ''
-      } scroll-mt-20 transition-colors duration-250 ${
-        rowHovered && interactive ? 'bg-[#111111]/[0.02]' : ''
-      }`}
+      data-hovered={isHovered ? 'true' : 'false'}
+      data-active={isActiveRow ? 'true' : 'false'}
+      data-interactive={interactive ? 'true' : 'false'}
+      aria-labelledby={`editorial-project-title-${project.id}`}
+      onPointerEnter={handlePointerEnter}
+      onPointerMove={handlePointerMove}
+      onPointerLeave={handlePointerLeave}
+      className={`editorial-project-row ${isLast ? 'is-last' : ''}`}
     >
       <motion.div
+        className="editorial-project-row-reveal"
         initial={prefersReduced ? false : { opacity: 0.2, y: 12 }}
         animate={isRevealed ? { opacity: 1, y: 0 } : { opacity: 0.2, y: 12 }}
         transition={{
-          duration: revealDuration,
+          duration: prefersReduced ? 0 : 0.42,
           delay: prefersReduced ? 0 : Math.min(index * 0.04, 0.12),
           ease: EDITORIAL_EASE,
         }}
@@ -177,45 +172,21 @@ const EditorialProjectRow: React.FC<EditorialProjectRowProps> = ({
         {interactive ? (
           <a
             href={projectHash}
+            aria-label={`Open ${project.title} case study`}
             onClick={handleOpenCaseStudy}
+            onKeyDown={handleSpaceActivation}
             data-testid={`project-title-link-${project.id}`}
-            className="editorial-title-trigger group/row grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 lg:gap-10 items-baseline w-full text-left cursor-pointer no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111] focus-visible:ring-offset-4 focus-visible:ring-offset-[#f4f4f1]"
+            className="editorial-project-heading"
           >
-            <h3 className="lg:col-span-6 m-0 text-[30px] sm:text-[40px] lg:text-[48px] font-extrabold tracking-[-0.045em] leading-[1.02] text-[#111111] text-balance">
-              <span className="editorial-title-link group-hover/row:text-[#0f5c3f] transition-colors duration-300">
-                {project.title}
-              </span>
-            </h3>
-
-            <p className="lg:col-span-6 m-0 text-[15px] sm:text-[16px] leading-[1.58] text-[#3a3f46] max-w-[48ch] lg:justify-self-end lg:text-right">
-              {project.summary}
-            </p>
+            {headingContents}
           </a>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 lg:gap-10 items-baseline w-full opacity-60">
-            <h3 className="lg:col-span-6 m-0 text-[30px] sm:text-[40px] lg:text-[48px] font-extrabold tracking-[-0.045em] leading-[1.02] text-[#111111] text-balance">
-              {project.title}
-            </h3>
-            <p className="lg:col-span-6 m-0 text-[15px] sm:text-[16px] leading-[1.58] text-[#3a3f46] max-w-[48ch] lg:justify-self-end lg:text-right">
-              {project.summary}
-            </p>
-          </div>
+          <div className="editorial-project-heading is-disabled">{headingContents}</div>
         )}
       </motion.div>
 
-      {/* Images only revealed on hover via smooth vertical-push horizontal media strip */}
       {interactive && (
-        <ProjectHoverMediaStrip
-          project={project}
-          isExpanded={rowHovered}
-          pointerRatioRef={pointerRatioRef}
-          prefersReduced={Boolean(prefersReduced)}
-          onOpenProject={(selected) => {
-            setRowHovered(false);
-            onBadgeUpdate(false, 0, 0);
-            onOpenProject(selected);
-          }}
-        />
+        <ProjectHoverMediaStrip project={project} isExpanded={isHovered} />
       )}
     </article>
   );
@@ -229,13 +200,25 @@ export const EditorialProjectsSection: React.FC<EditorialProjectsSectionProps> =
 }) => {
   const prefersReduced = useReducedMotion();
   const headerRef = useRef<HTMLDivElement | null>(null);
+  const rowElementsRef = useRef(new Map<string, HTMLElement>());
   const badgeRef = useRef<HTMLDivElement | null>(null);
   const badgeTargetRef = useRef({ x: 0, y: 0, visible: false, initialized: false });
   const badgePosRef = useRef({ x: 0, y: 0 });
   const badgeRafRef = useRef<number>(0);
 
-  const [headerVisible, setHeaderVisible] = useState<boolean>(() => Boolean(prefersReduced));
+  const [headerVisible, setHeaderVisible] = useState(Boolean(prefersReduced));
+  const [scrollActiveProjectId, setScrollActiveProjectId] = useState<string | null>(
+    projects[0]?.id ?? null
+  );
+  const [hoveredProjectId, setHoveredProjectId] = useState<string | null>(null);
+  const [hoverActiveProjectId, setHoverActiveProjectId] = useState<string | null>(null);
   const [badgeVisible, setBadgeVisible] = useState(false);
+  const hoverActivationTimerRef = useRef<number | null>(null);
+
+  const registerRow = useCallback((projectId: string, node: HTMLElement | null) => {
+    if (node) rowElementsRef.current.set(projectId, node);
+    else rowElementsRef.current.delete(projectId);
+  }, []);
 
   const stopBadgeLoop = useCallback(() => {
     if (badgeRafRef.current !== 0) {
@@ -245,39 +228,32 @@ export const EditorialProjectsSection: React.FC<EditorialProjectsSectionProps> =
   }, []);
 
   const stepBadgeLoop = useCallback(() => {
-    const el = badgeRef.current;
+    const element = badgeRef.current;
     const target = badgeTargetRef.current;
-    if (!el || !target.visible) {
+    if (!element || !target.visible) {
       badgeRafRef.current = 0;
       return;
     }
 
-    const pos = badgePosRef.current;
-    const nextX = lerpValue(pos.x, target.x, 0.24);
-    const nextY = lerpValue(pos.y, target.y, 0.24);
+    const position = badgePosRef.current;
+    const factor = prefersReduced ? 1 : 0.18;
+    const nextX = lerpValue(position.x, target.x, factor);
+    const nextY = lerpValue(position.y, target.y, factor);
+    position.x = Math.abs(target.x - nextX) < 0.2 ? target.x : nextX;
+    position.y = Math.abs(target.y - nextY) < 0.2 ? target.y : nextY;
 
-    pos.x = Math.abs(target.x - nextX) < 0.2 ? target.x : nextX;
-    pos.y = Math.abs(target.y - nextY) < 0.2 ? target.y : nextY;
+    element.style.transform = `translate3d(${position.x.toFixed(1)}px, ${position.y.toFixed(1)}px, 0) translate(-50%, -50%)`;
 
-    el.style.transform = `translate3d(${(pos.x + 16).toFixed(1)}px, ${(pos.y + 16).toFixed(1)}px, 0)`;
-
-    if (Math.abs(target.x - pos.x) > 0.2 || Math.abs(target.y - pos.y) > 0.2) {
+    if (Math.abs(target.x - position.x) > 0.2 || Math.abs(target.y - position.y) > 0.2) {
       badgeRafRef.current = window.requestAnimationFrame(stepBadgeLoop);
     } else {
       badgeRafRef.current = 0;
     }
-  }, []);
+  }, [prefersReduced]);
 
   const handleBadgeUpdate = useCallback(
     (visible: boolean, clientX: number, clientY: number) => {
-      if (prefersReduced) {
-        badgeTargetRef.current.visible = false;
-        setBadgeVisible(false);
-        stopBadgeLoop();
-        return;
-      }
-
-      if (!visible) {
+      if (!visible || prefersReduced) {
         badgeTargetRef.current.visible = false;
         badgeTargetRef.current.initialized = false;
         setBadgeVisible(false);
@@ -285,21 +261,17 @@ export const EditorialProjectsSection: React.FC<EditorialProjectsSectionProps> =
         return;
       }
 
-      badgeTargetRef.current.x = clientX;
-      badgeTargetRef.current.y = clientY;
-      badgeTargetRef.current.visible = true;
+      const target = badgeTargetRef.current;
+      target.x = clientX;
+      target.y = clientY;
+      target.visible = true;
 
-      if (!badgeTargetRef.current.initialized) {
-        badgeTargetRef.current.initialized = true;
-        badgePosRef.current.x = clientX;
-        badgePosRef.current.y = clientY;
-        if (badgeRef.current) {
-          badgeRef.current.style.transform = `translate3d(${(clientX + 16).toFixed(1)}px, ${(clientY + 16).toFixed(1)}px, 0)`;
-        }
+      if (!target.initialized) {
+        target.initialized = true;
+        badgePosRef.current = { x: clientX, y: clientY };
       }
 
-      setBadgeVisible((prev) => (prev ? prev : true));
-
+      setBadgeVisible(true);
       if (badgeRafRef.current === 0) {
         badgeRafRef.current = window.requestAnimationFrame(stepBadgeLoop);
       }
@@ -307,30 +279,83 @@ export const EditorialProjectsSection: React.FC<EditorialProjectsSectionProps> =
     [prefersReduced, stepBadgeLoop, stopBadgeLoop]
   );
 
-  // Clean up cursor badge on unmount or view switch
+  const handleProjectHover = useCallback(
+    (projectId: string | null) => {
+      setHoveredProjectId(projectId);
+      if (hoverActivationTimerRef.current !== null) {
+        window.clearTimeout(hoverActivationTimerRef.current);
+        hoverActivationTimerRef.current = null;
+      }
+      if (projectId === null) {
+        setHoverActiveProjectId(null);
+      } else if (prefersReduced) {
+        setHoverActiveProjectId(projectId);
+      } else {
+        hoverActivationTimerRef.current = window.setTimeout(() => {
+          setHoverActiveProjectId(projectId);
+          hoverActivationTimerRef.current = null;
+        }, 70);
+      }
+    },
+    [prefersReduced]
+  );
+
+  // Keep the row nearest the view's 45% focal line active while scrolling.
   useEffect(() => {
-    if (!isActive) {
-      badgeTargetRef.current.visible = false;
-      badgeTargetRef.current.initialized = false;
-      setBadgeVisible(false);
-      stopBadgeLoop();
-    }
-    return () => stopBadgeLoop();
-  }, [isActive, stopBadgeLoop]);
+    const root = scrollContainerRef.current;
+    if (!root || !isActive) return;
+
+    let frame = 0;
+    const updateActiveRow = () => {
+      frame = 0;
+      const rootRect = root.getBoundingClientRect();
+      const focalY = rootRect.top + root.clientHeight * 0.45;
+      let nearestId: string | null = null;
+      let nearestDistance = Number.POSITIVE_INFINITY;
+
+      for (const [projectId, row] of rowElementsRef.current) {
+        const rect = row.getBoundingClientRect();
+        if (rect.bottom < rootRect.top || rect.top > rootRect.bottom) continue;
+        const distance = focalY < rect.top ? rect.top - focalY : focalY > rect.bottom ? focalY - rect.bottom : 0;
+        if (distance < nearestDistance) {
+          nearestId = projectId;
+          nearestDistance = distance;
+        }
+      }
+
+      if (nearestId) setScrollActiveProjectId(nearestId);
+    };
+
+    const scheduleUpdate = () => {
+      if (frame === 0) frame = window.requestAnimationFrame(updateActiveRow);
+    };
+
+    root.addEventListener('scroll', scheduleUpdate, { passive: true });
+    window.addEventListener('resize', scheduleUpdate);
+    scheduleUpdate();
+    return () => {
+      root.removeEventListener('scroll', scheduleUpdate);
+      window.removeEventListener('resize', scheduleUpdate);
+      if (frame !== 0) window.cancelAnimationFrame(frame);
+    };
+  }, [isActive, projects, scrollContainerRef]);
 
   useEffect(() => {
+    if (projects.length > 0 && !projects.some((project) => project.id === scrollActiveProjectId)) {
+      setScrollActiveProjectId(projects[0].id);
+    }
+  }, [projects, scrollActiveProjectId]);
+
+  useEffect(() => {
+    if (!prefersReduced && headerVisible && isActive) return;
     if (prefersReduced) {
       setHeaderVisible(true);
+      return;
     }
-  }, [prefersReduced]);
-
-  // Reveal editorial section heading smoothly when entering #tech viewport
-  useEffect(() => {
-    if (prefersReduced || headerVisible || !isActive) return;
+    if (!isActive) return;
     const node = headerRef.current;
     const root = scrollContainerRef.current;
     if (!node) return;
-
     if (typeof IntersectionObserver === 'undefined') {
       setHeaderVisible(true);
       return;
@@ -338,17 +363,34 @@ export const EditorialProjectsSection: React.FC<EditorialProjectsSectionProps> =
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries.some((e) => e.isIntersecting)) {
+        if (entries.some((entry) => entry.isIntersecting)) {
           setHeaderVisible(true);
           observer.disconnect();
         }
       },
       { root: root ?? null, threshold: 0.05 }
     );
-
     observer.observe(node);
     return () => observer.disconnect();
   }, [headerVisible, isActive, prefersReduced, scrollContainerRef]);
+
+  useEffect(() => {
+    if (isActive) return;
+    handleProjectHover(null);
+    handleBadgeUpdate(false, 0, 0);
+  }, [handleBadgeUpdate, handleProjectHover, isActive]);
+
+  useEffect(() => () => stopBadgeLoop(), [stopBadgeLoop]);
+  useEffect(
+    () => () => {
+      if (hoverActivationTimerRef.current !== null) {
+        window.clearTimeout(hoverActivationTimerRef.current);
+      }
+    },
+    []
+  );
+
+  const activeProjectId = hoverActiveProjectId ?? scrollActiveProjectId;
 
   return (
     <section
@@ -356,85 +398,65 @@ export const EditorialProjectsSection: React.FC<EditorialProjectsSectionProps> =
       aria-labelledby="selected-projects-heading"
       className="pt-8 sm:pt-12 pb-6"
     >
-      {/* Editorial Section Introduction */}
-      <div ref={headerRef} className="pb-8 sm:pb-10">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div className="overflow-hidden">
-            <motion.p
-              className="font-mono-tech text-[11.5px] font-medium uppercase tracking-[0.14em] text-[#4b4f55] m-0"
-              initial={prefersReduced ? false : { opacity: 0, y: 12 }}
-              animate={headerVisible ? { opacity: 1, y: 0 } : { opacity: 0, y: 12 }}
-              transition={{ duration: prefersReduced ? 0 : 0.45, ease: EDITORIAL_EASE }}
-            >
-              Engineering Works · {String(projects.length).padStart(2, '0')} Selected
-            </motion.p>
-
-            <motion.h2
-              id="selected-projects-heading"
-              className="mt-2.5 mb-0 text-[40px] sm:text-[56px] lg:text-[72px] font-extrabold tracking-[-0.05em] leading-[0.94] text-[#111111] text-balance"
-              initial={prefersReduced ? false : { opacity: 0, y: 28 }}
-              animate={headerVisible ? { opacity: 1, y: 0 } : { opacity: 0, y: 28 }}
-              transition={{
-                duration: prefersReduced ? 0 : 0.65,
-                delay: prefersReduced ? 0 : 0.06,
-                ease: EDITORIAL_EASE,
-              }}
-            >
-              Selected{' '}
-              <span className="inline-block bg-[#ffc400] border-2 border-[#111111] px-2.5 py-0.5 leading-[0.95]">
-                Projects
-              </span>
-            </motion.h2>
-          </div>
-
-          <motion.p
-            className="text-[15px] leading-[1.58] text-[#4b4f55] max-w-[38ch] m-0 md:text-right text-balance"
-            initial={prefersReduced ? false : { opacity: 0, y: 16 }}
-            animate={headerVisible ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }}
+      <div ref={headerRef} className="editorial-projects-header">
+        <div>
+          <p className="editorial-projects-count">Projects · {String(projects.length).padStart(2, '0')}</p>
+          <motion.h2
+            id="selected-projects-heading"
+            initial={prefersReduced ? false : { opacity: 0, y: 28 }}
+            animate={headerVisible ? { opacity: 1, y: 0 } : { opacity: 0, y: 28 }}
             transition={{
-              duration: prefersReduced ? 0 : 0.55,
-              delay: prefersReduced ? 0 : 0.14,
+              duration: prefersReduced ? 0 : 0.65,
+              delay: prefersReduced ? 0 : 0.06,
               ease: EDITORIAL_EASE,
             }}
           >
-            Hover any project to preview screens &amp; architecture—click to open the full case study.
-          </motion.p>
+            Selected <span>Projects</span>
+          </motion.h2>
         </div>
+        <p className="editorial-projects-hint">Scroll or hover to preview. Click to open the case study.</p>
       </div>
 
-      {/* Minimal Editorial Project List Rows (Images Revealed Only on Hover) */}
       {projects.length === 0 ? (
         <div className="py-12 border-t border-[#111111]/20 font-mono-tech text-sm text-[#4b4f55]">
           No projects published yet.
         </div>
       ) : (
-        <div>
+        <div
+          className="editorial-project-list"
+          data-hovering={hoveredProjectId ? 'true' : 'false'}
+        >
           {projects.map((project, index) => (
             <EditorialProjectRow
               key={project.id}
               project={project}
               index={index}
               isLast={index === projects.length - 1}
+              isActiveRow={activeProjectId === project.id}
+              isHovered={hoveredProjectId === project.id}
               scrollContainerRef={scrollContainerRef}
               isActiveView={isActive}
+              prefersReduced={Boolean(prefersReduced)}
               onOpenProject={onOpenProject}
+              onProjectHover={handleProjectHover}
               onBadgeUpdate={handleBadgeUpdate}
+              registerRow={registerRow}
             />
           ))}
         </div>
       )}
 
-      {/* Custom Floating "View case" Cursor Badge (Desktop Fine-Pointer Only) */}
       {!prefersReduced && (
         <div
           ref={badgeRef}
           aria-hidden="true"
-          data-testid="view-case-cursor-badge"
+          data-testid="view-project-cursor-badge"
           data-visible={badgeVisible ? 'true' : 'false'}
-          className={`editorial-case-cursor-badge ${badgeVisible ? 'is-visible' : ''}`}
+          className={`editorial-case-cursor-badge${badgeVisible ? ' is-visible' : ''}`}
         >
-          <span>View case</span>
-          <ArrowUpRight className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+          <FolderOpen className="editorial-cursor-folder" aria-hidden="true" />
+          <span>View project</span>
+          <MousePointer2 className="editorial-cursor-pointer" aria-hidden="true" />
         </div>
       )}
     </section>

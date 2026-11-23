@@ -120,7 +120,7 @@ test('validateCreativeWorkPayload enforces category, theme, palette bounds, and 
     index: '01',
     title: 'PORTRAITS',
     handle: '@tarunsuthar · Direction',
-    category: 'Direction',
+    category: 'AI Portraits',
     subtitle: 'Atmospheric lighting & character mood',
     shortDescription: 'AI-directed twilight portrait series balancing sculpted rim light.',
     masonrySize: 'tall',

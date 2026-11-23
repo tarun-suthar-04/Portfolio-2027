@@ -1,24 +1,38 @@
-# Security Specification — Portfolio Admin Panel
+# Firestore security model
 
-## 1. Data & Access Invariants
-1. **Default Deny**: Every unmatched Firestore path is denied (`allow read, write: if false`).
-2. **Verified Admin Gate**: Every privileged write and private read requires `request.auth != null`, `request.auth.token.email_verified == true`, and either a bootstrapped super-admin identity (`ahirwalshiwani9@gmail.com`, `cdstarun2004@gmail.com`, `cdstarun1837@gmail.com`) or an active document in `/admins/{request.auth.uid}` (`active == true`).
-3. **Zero Self-Escalation**: Non-admin authenticated users can NEVER create, update, or delete documents in `/admins/{adminUid}` or inject `role: "super_admin"`.
-4. **Immutable Append-Only Audit Logs**: `/audit_logs/{logId}` can only be created by verified admins (`actorUid == request.auth.uid` and `createdAt == request.time`), and can NEVER be updated or deleted (`allow update, delete: if false`).
-5. **Strict Schema & No Shadow Fields**: Every `create` verifies `keys().hasAll(...)` and `keys().hasOnly(...)`; every `update` verifies `isValid[Entity](incoming())` first, preserves immutable fields (`createdAt`, `uid`), enforces `updatedAt == request.time`, and restricts modified keys via `affectedKeys().hasOnly(...)`.
-6. **Path ID & Size Hardening**: Single-document operations validate `isValidId(docId)` (`<= 128` chars, `^[a-zA-Z0-9_\-]+$`), every string enforces `.size()` limits, every array enforces bounded `.size()` and element type checks, and external URLs enforce `^https://.*$` (blocking `javascript:` / `data:` XSS URLs).
-7. **PII Isolation & Query Enforcement**: `/admins` and `/audit_logs` never allow blanket `isSignedIn()` reads or `get()`/`exists()` inside `allow list`. Published portfolio items (`published == true`) are publicly queryable, while unpublished drafts are hidden from non-admins.
+This document summarizes the rules currently implemented in `firestore.rules`. The deployed Firebase project can differ until these rules are deployed. Client-side validation in `src/lib/adminValidation.ts` improves form feedback; Firestore rules remain the authorization and schema boundary.
 
-## 2. The "Dirty Dozen" Adversarial Payloads
-1. **Unauthenticated Write to Projects**: Anonymous client attempts `create` on `/projects/pwn` -> `PERMISSION_DENIED`.
-2. **Email Spoofing (`email_verified: false`)**: Attacker signs in with unverified token matching admin email -> `PERMISSION_DENIED`.
-3. **Self-Privilege Escalation**: Regular verified user attempts `create` on `/admins/{theirUid}` with `role: "super_admin"` -> `PERMISSION_DENIED`.
-4. **Shadow Field Injection on Project Create**: Verified admin sends extra ghost field `isVerified: true` on `/projects/proj-1` -> `PERMISSION_DENIED` (`hasOnly` rejection).
-5. **Shadow Field Injection on Update**: Verified admin modifies unwhitelisted field `createdAt` or injects `shadowFlag: 1` during update -> `PERMISSION_DENIED`.
-6. **ID Poisoning**: Attacker targets `/projects/../../etc/passwd` or 200-char ID -> `PERMISSION_DENIED` (`isValidId` rejection).
-7. **XSS URL Scheme Injection**: Payload supplies `githubUrl: "javascript:alert(1)"` or `linkedinUrl: "data:text/html,..."` -> `PERMISSION_DENIED` (`^https://` regex guard).
-8. **Audit Log Tampering / Deletion**: Even a verified super-admin attempts `update` or `delete` on `/audit_logs/log-1` -> `PERMISSION_DENIED`.
-9. **Audit Log Identity Spoofing**: Admin attempts to log an event with `actorUid` set to a different UID -> `PERMISSION_DENIED`.
-10. **Client Timestamp Forgery**: Payload passes backdated `createdAt` or `updatedAt != request.time` -> `PERMISSION_DENIED`.
-11. **Denial-of-Wallet Oversized String / Array**: Payload submits 50KB `summary` or 100 items in `stack` array -> `PERMISSION_DENIED` (`.size()` limit).
-12. **PII Blanket Read on `/admins` & Draft Leak on `/projects`**: Non-admin verified user attempts `get` on another user's `/admins/{otherUid}` or `list` on unpublished `/projects` (`published == false`) -> `PERMISSION_DENIED`.
+## Global behavior and identities
+
+- Rules use Firestore Rules version 2 and deny all reads and writes on unmatched paths.
+- A verified user must have a Firebase Auth token with `email_verified == true` for privileged actions.
+- Bootstrap Super Admin access is granted to `ahirwalshiwani9@gmail.com`, `cdstarun2004@gmail.com`, and `cdstarun1837@gmail.com` in both `src/lib/adminValidation.ts` and `firestore.rules`.
+- Other admins are resolved from `/admins/{uid}` and must have an active record with role `admin` or `super_admin`. A registered `super_admin` can manage the roster; bootstrap admins are treated as super admins.
+- Email verification is required for admin recognition. Admin role is not granted by the email address alone when the Firebase token is unverified.
+
+## Collection access
+
+| Path | Reads | Writes |
+| --- | --- | --- |
+| `/site_config/profile` | Public single-document read; collection listing denied | Admin create/update with validated profile fields; delete denied |
+| `/projects/{id}` | Published items are public; an admin can get a draft. Bootstrap admins can list all drafts; a verified user can list documents they authored (`updatedBy` matches their UID). A non-bootstrap registered admin cannot list another admin's drafts. | Admin create/update/delete with validated project fields and timestamp/author checks |
+| `/creative_works/{id}` | Published items are public; an admin can get a draft. Bootstrap admins can list all drafts; a verified user can list documents they authored (`updatedBy` matches their UID). A non-bootstrap registered admin cannot list another admin's drafts. | Admin create/update/delete with validated creative-work fields and timestamp/author checks |
+| `/admins/{uid}` | A verified user may read their own record; admins may read a record; list is available to bootstrap admins or through the caller's own-UID query | Super Admin create/update; Super Admin may delete another admin but not their own record. A user cannot deactivate or downgrade their own Super Admin record. |
+| `/audit_logs/{id}` | Admin get; bootstrap admins can list all, other admins can list their own actor records | Admin create only; update and delete are denied |
+| `/project_inquiries/{id}` | Admin get; **list is restricted to bootstrap admins** | Public create with strict shape/size checks and initial `new` status; admins can change only status or delete |
+
+Firestore queries must be constrained so every possible result satisfies the relevant `list` rule. The client admin panel loads inquiry lists only for bootstrap admins, matching the current inquiry-list rule.
+
+## Validation and invariants
+
+Rules validate document keys and types, bounded strings/lists, safe document IDs, timestamp fields, and entity-specific URL/image values. Project and creative-work writes bind `updatedBy` to the signed-in UID; creates and updates use server request time for their timestamps. Admin records and audit entries bind actor/UID fields to Auth identity. Exact limits and accepted values are defined in `firestore.rules` and should be changed there deliberately.
+
+Creative image data is limited to WebP, JPEG, or PNG data URLs under the configured size cap; SVG and HTML data URLs are rejected. Local media paths and video URLs are constrained by the rule helpers. The client upload helper is in `src/lib/imageUpload.ts`.
+
+Audit records are append-only at the rules layer. The client writes them best-effort through `recordAuditLog`; an audit event should not be treated as guaranteed if that write fails.
+
+## Operational notes
+
+- Firestore rules are deployed from the repository's `firestore.rules` mapping in `firebase.json`; the configured named database must match the Firebase project.
+- Firebase Authentication provider enablement and authorized domains are separate project settings. Deploying Firestore rules or Hosting does not authorize a browser hostname for Google sign-in.
+- Rule tests are in `firestore.rules.test.ts`; helper validation tests are in `src/lib/adminValidation.test.ts`. This document does not claim those tests have been run against the current Firebase deployment.

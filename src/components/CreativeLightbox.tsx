@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Check, ChevronLeft, ChevronRight, Copy, X } from 'lucide-react';
 import { CreativeWorkItem } from '../data/portfolio';
 import { GlassCardOrb } from './CubicGlassGrid';
 
@@ -37,6 +37,7 @@ export const CreativeLightbox: React.FC<CreativeLightboxProps> = ({
   }, [activeIndex, works.length, onClose, onSelectIndex]);
 
   const [imageError, setImageError] = React.useState(false);
+  const [copiedPrompt, setCopiedPrompt] = useState(false);
 
   useEffect(() => {
     setImageError(false);
@@ -47,6 +48,16 @@ export const CreativeLightbox: React.FC<CreativeLightboxProps> = ({
   const prevIndex = (activeIndex - 1 + works.length) % works.length;
   const nextIndex = (activeIndex + 1) % works.length;
   const showFeatureImage = Boolean(work.featureImage && !imageError);
+  const copyPrompt = async () => {
+    if (!work.promptText) return;
+    try {
+      await navigator.clipboard.writeText(work.promptText);
+      setCopiedPrompt(true);
+      window.setTimeout(() => setCopiedPrompt(false), 1800);
+    } catch {
+      setCopiedPrompt(false);
+    }
+  };
 
   return (
     <div
@@ -74,13 +85,20 @@ export const CreativeLightbox: React.FC<CreativeLightboxProps> = ({
           </div>
           {showFeatureImage ? (
             <div className="relative h-[260px] md:h-[340px] w-full overflow-hidden bg-[#141518]">
-              <img
+              {work.featureVideo ? <video
+                src={work.featureVideo}
+                poster={work.featureImage}
+                controls
+                playsInline
+                preload="metadata"
+                className="w-full h-full object-contain"
+              /> : <img
                 src={work.featureImage}
                 alt={`${work.title} — ${work.subtitle}`}
                 referrerPolicy="no-referrer"
                 onError={() => setImageError(true)}
-                className="w-full h-full object-cover"
-              />
+                className="w-full h-full object-contain"
+              />}
             </div>
           ) : (
             <GlassCardOrb theme={work.theme} className="h-[240px] md:h-[310px] w-full" />
@@ -125,7 +143,22 @@ export const CreativeLightbox: React.FC<CreativeLightboxProps> = ({
                 <p className="m-0">{work.promptApproach}</p>
               </div>
 
-              <div>
+              {['AI Portraits', 'AI Video'].includes(work.category) && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={!work.promptText}
+                    onClick={() => void copyPrompt()}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full border border-[#141518]/15 bg-white text-xs font-medium text-[#141518] hover:bg-[#141518] hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {copiedPrompt ? <Check className="w-3.5 h-3.5" aria-hidden="true" /> : <Copy className="w-3.5 h-3.5" aria-hidden="true" />}
+                    {copiedPrompt ? 'Prompt copied' : 'Copy prompt'}
+                  </button>
+                  {!work.promptText && <span className="text-xs text-[#6b7280]">No exact prompt saved for this piece.</span>}
+                </div>
+              )}
+
+              {work.palette.length > 0 && <div>
                 <div className="font-mono-tech text-[11px] uppercase tracking-[0.12em] text-[#6b7280] mb-2">
                   Gradient Swatches
                 </div>
@@ -141,7 +174,7 @@ export const CreativeLightbox: React.FC<CreativeLightboxProps> = ({
                     </div>
                   ))}
                 </div>
-              </div>
+              </div>}
             </div>
           </div>
 

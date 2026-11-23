@@ -19,6 +19,7 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
+  writeBatch,
 } from 'firebase/firestore';
 import type { CreativeCategory, GlassTheme, MasonrySize } from '../../data/portfolio';
 import type { ManagedCreativeWorkItem } from '../../context/PortfolioDataContext';
@@ -65,8 +66,10 @@ interface WorkFormState {
   year: string;
   brief: string;
   promptApproach: string;
+  promptText: string;
   paletteText: string;
   featureImage: string;
+  featureVideo: string;
   published: boolean;
   sortOrder: number;
 }
@@ -76,8 +79,8 @@ function createEmptyWorkForm(nextOrder: number): WorkFormState {
     id: '',
     index: String(nextOrder).padStart(2, '0'),
     title: '',
-    handle: '@tarunsuthar · Direction',
-    category: 'Direction',
+    handle: '@tarunsuthar · AI Portraits',
+    category: 'AI Portraits',
     subtitle: '',
     shortDescription: '',
     masonrySize: 'medium',
@@ -86,8 +89,10 @@ function createEmptyWorkForm(nextOrder: number): WorkFormState {
     year: '2025–2026',
     brief: '',
     promptApproach: '',
-    paletteText: '#1d4ed8, #60a5fa, #dbeafe, #ffffff',
+    promptText: '',
+    paletteText: '',
     featureImage: '',
+    featureVideo: '',
     published: true,
     sortOrder: nextOrder,
   };
@@ -156,8 +161,10 @@ export const AdminCreativeWorksTab: React.FC<AdminCreativeWorksTabProps> = ({
       year: work.year,
       brief: work.brief,
       promptApproach: work.promptApproach,
+      promptText: work.promptText ?? '',
       paletteText: work.palette.join(', '),
       featureImage: existingImg,
+      featureVideo: work.featureVideo ?? '',
       published: work.published,
       sortOrder: work.sortOrder,
     });
@@ -240,8 +247,10 @@ export const AdminCreativeWorksTab: React.FC<AdminCreativeWorksTabProps> = ({
       year: form.year,
       brief: form.brief,
       promptApproach: form.promptApproach,
+      promptText: form.promptText,
       palette,
       featureImage: form.featureImage,
+      featureVideo: form.featureVideo,
       published: form.published,
       sortOrder: form.sortOrder,
     });
@@ -252,6 +261,7 @@ export const AdminCreativeWorksTab: React.FC<AdminCreativeWorksTabProps> = ({
     }
 
     const clean = validated.data;
+    const existingWork = editingId ? works.find((work) => work.id === editingId) : undefined;
     setSaving(true);
     try {
       const ref = doc(db, 'creative_works', clean.id);
@@ -268,8 +278,11 @@ export const AdminCreativeWorksTab: React.FC<AdminCreativeWorksTabProps> = ({
         year: clean.year,
         brief: clean.brief,
         promptApproach: clean.promptApproach,
+        promptText: clean.promptText ?? '',
         palette: clean.palette,
         featureImage: clean.featureImage ?? '',
+        featureVideo: clean.featureVideo ?? '',
+        categoryCover: existingWork?.category === clean.category && existingWork.categoryCover === true,
         published: clean.published,
         sortOrder: clean.sortOrder,
         updatedBy: actorUid,
@@ -311,6 +324,44 @@ export const AdminCreativeWorksTab: React.FC<AdminCreativeWorksTabProps> = ({
       }
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSetCategoryCover = async (work: ManagedCreativeWorkItem) => {
+    if (!work.featureImage || !work.published || work.categoryCover) return;
+    setBusyId(work.id);
+    try {
+      const batch = writeBatch(db);
+      for (const current of works) {
+        if (current.category === work.category && current.categoryCover) {
+          batch.update(doc(db, 'creative_works', current.id), {
+            categoryCover: false,
+            updatedBy: actorUid,
+            updatedAt: serverTimestamp(),
+          });
+        }
+      }
+      batch.update(doc(db, 'creative_works', work.id), {
+        categoryCover: true,
+        updatedBy: actorUid,
+        updatedAt: serverTimestamp(),
+      });
+      await batch.commit();
+      await recordAuditLog({
+        action: 'update',
+        resourceType: 'creative_works',
+        resourceId: work.id,
+        summary: `Selected ${work.title} as the ${work.category} cover`,
+      });
+      onNotify(`Updated the ${work.category} cover.`);
+    } catch (error) {
+      try {
+        handleFirestoreError(error, OperationType.UPDATE, `creative_works/${work.id}`);
+      } catch (e) {
+        onNotify(e instanceof Error ? e.message : 'Unable to update category cover.', 'error');
+      }
+    } finally {
+      setBusyId(null);
     }
   };
 
@@ -450,7 +501,7 @@ export const AdminCreativeWorksTab: React.FC<AdminCreativeWorksTabProps> = ({
                               <img
                                 src={work.featureImage}
                                 alt=""
-                                className="w-full h-full object-cover"
+                                className="w-full h-full object-contain"
                               />
                               <span className="absolute bottom-0.5 right-0.5 px-1 rounded bg-slate-950/75 font-mono-tech text-[9px] font-bold text-white">
                                 {work.index}
@@ -470,6 +521,11 @@ export const AdminCreativeWorksTab: React.FC<AdminCreativeWorksTabProps> = ({
                               {hasCustomImg && (
                                 <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 font-mono-tech text-[10px] font-medium">
                                   Image
+                                </span>
+                              )}
+                              {work.categoryCover && (
+                                <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono-tech text-[10px] font-medium">
+                                  Category cover
                                 </span>
                               )}
                             </div>
@@ -534,6 +590,18 @@ export const AdminCreativeWorksTab: React.FC<AdminCreativeWorksTabProps> = ({
                           </div>
                         ) : (
                           <div className="inline-flex items-center gap-1">
+                            {hasCustomImg && work.published && (
+                              <button
+                                type="button"
+                                disabled={isBusy || work.categoryCover}
+                                onClick={() => void handleSetCategoryCover(work)}
+                                title={work.categoryCover ? 'Current category cover' : `Use as ${work.category} cover`}
+                                aria-label={work.categoryCover ? `${work.category} cover selected` : `Use ${work.title} as ${work.category} cover`}
+                                className={`p-2 rounded-lg cursor-pointer transition-colors ${work.categoryCover ? 'text-emerald-700 bg-emerald-50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'}`}
+                              >
+                                <ImagePlus className="w-4 h-4" aria-hidden="true" />
+                              </button>
+                            )}
                             <button
                               type="button"
                               disabled={isBusy}
@@ -638,7 +706,7 @@ export const AdminCreativeWorksTab: React.FC<AdminCreativeWorksTabProps> = ({
                       <img
                         src={form.featureImage}
                         alt="Feature image preview"
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain"
                       />
                     </div>
                     <div className="flex-1 space-y-2.5">
@@ -735,6 +803,16 @@ export const AdminCreativeWorksTab: React.FC<AdminCreativeWorksTabProps> = ({
                         ? 'Uploaded image stored (paste URL here to override)'
                         : 'https://example.com/artwork.jpg'
                     }
+                    className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white font-mono-tech text-xs text-slate-900 placeholder:text-slate-400"
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-[11px] font-medium text-slate-500">Video URL (optional)</span>
+                  <input
+                    type="text"
+                    value={form.featureVideo}
+                    onChange={(e) => setForm((prev) => ({ ...prev, featureVideo: e.target.value }))}
+                    placeholder="/work/your-video.mp4"
                     className="w-full px-3 py-1.5 rounded-lg border border-slate-200 bg-white font-mono-tech text-xs text-slate-900 placeholder:text-slate-400"
                   />
                 </label>
@@ -914,6 +992,17 @@ export const AdminCreativeWorksTab: React.FC<AdminCreativeWorksTabProps> = ({
               </div>
 
               <label className="block space-y-1">
+                <span className="text-xs font-medium text-slate-700">Exact generation prompt (optional, copyable in Gallery)</span>
+                <textarea
+                  rows={4}
+                  maxLength={8000}
+                  value={form.promptText}
+                  onChange={(e) => setForm((prev) => ({ ...prev, promptText: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 font-mono-tech text-xs text-slate-900"
+                />
+              </label>
+
+              <label className="block space-y-1">
                 <span className="text-xs font-medium text-slate-700">Short Card Description (10–320 chars) *</span>
                 <textarea
                   required
@@ -970,11 +1059,10 @@ export const AdminCreativeWorksTab: React.FC<AdminCreativeWorksTabProps> = ({
 
                 <label className="block space-y-1">
                   <span className="text-xs font-medium text-slate-700">
-                    Hex Palette (3–6 comma-separated) *
+                    Hex Palette (optional, 3–6 comma-separated)
                   </span>
                   <input
                     type="text"
-                    required
                     value={form.paletteText}
                     onChange={(e) => setForm((prev) => ({ ...prev, paletteText: e.target.value }))}
                     className="w-full px-3 py-2 rounded-lg border border-slate-200 font-mono-tech text-xs text-slate-900"

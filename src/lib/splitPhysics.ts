@@ -1,4 +1,4 @@
-export type ViewMode = 'land' | 'tech' | 'cre' | 'admin';
+export type ViewMode = 'land' | 'tech' | 'cre' | 'gallery' | 'admin';
 
 export const SPLIT_CONFIG = {
   thresholdVertical: 0.2,
@@ -96,6 +96,7 @@ export function parseViewFromLocation(hash: string, search: string): ViewMode {
   if (normalizedHash === 'admin' || normalizedHash.startsWith('admin-')) {
     return 'admin';
   }
+  if (normalizedHash === 'gallery') return 'gallery';
   if (
     normalizedHash === 'tech' ||
     normalizedHash === 'technical' ||
@@ -115,6 +116,7 @@ export function parseViewFromLocation(hash: string, search: string): ViewMode {
   const params = new URLSearchParams(search);
   const viewParam = params.get('view')?.trim().toLowerCase();
   if (viewParam === 'admin') return 'admin';
+  if (viewParam === 'gallery') return 'gallery';
   if (viewParam === 'tech' || viewParam === 'technical') return 'tech';
   if (viewParam === 'cre' || viewParam === 'creative') return 'cre';
 
@@ -124,6 +126,7 @@ export function parseViewFromLocation(hash: string, search: string): ViewMode {
 /** Map a ViewMode to its canonical URL hash fragment. */
 export function viewToHash(view: ViewMode): string {
   if (view === 'admin') return '#admin';
+  if (view === 'gallery') return '#gallery';
   if (view === 'tech') return '#tech';
   if (view === 'cre') return '#creative';
   return '';

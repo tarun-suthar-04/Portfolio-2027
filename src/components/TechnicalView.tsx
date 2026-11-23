@@ -1,11 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowDown, ArrowUpRight } from 'lucide-react';
+import { ArrowDown } from 'lucide-react';
 import { ProjectItem } from '../data/portfolio';
 import { usePortfolioData } from '../context/PortfolioDataContext';
-import { calculatePullProgress, SPLIT_CONFIG, ViewMode } from '../lib/splitPhysics';
+import { ViewMode } from '../lib/splitPhysics';
 import { EditorialProjectsSection } from './EditorialProjectsSection';
 import { ProjectContactFooter } from './ProjectContactFooter';
-import { ProjectModal, ProjectModalTab } from './ProjectModal';
 import { ResumeModal } from './ResumeModal';
 import { TechStackMarquee } from './TechStackMarquee';
 
@@ -28,15 +27,9 @@ export const TechnicalView: React.FC<TechnicalViewProps> = ({
 }) => {
   const { profile, projects } = usePortfolioData();
   const scrollRef = useRef<HTMLDivElement | null>(null);
-  const accRef = useRef<number>(0);
-  const touchYRef = useRef<number>(0);
+  const detailRef = useRef<HTMLDivElement | null>(null);
   const prevViewRef = useRef<ViewMode>(activeView);
 
-  const [pullProgress, setPullProgress] = useState(0);
-  const [modalState, setModalState] = useState<{
-    project: ProjectItem | null;
-    tab: ProjectModalTab;
-  }>({ project: null, tab: 'preview' });
   const [resumeOpen, setResumeOpen] = useState(false);
 
   const isTechInteractive = activeView === 'tech' && !activeProjectId;
@@ -45,71 +38,23 @@ export const TechnicalView: React.FC<TechnicalViewProps> = ({
   useEffect(() => {
     if (activeView === 'tech' && prevViewRef.current !== 'tech' && scrollRef.current) {
       scrollRef.current.scrollTop = 0;
-      accRef.current = 0;
-      setPullProgress(0);
     }
     prevViewRef.current = activeView;
   }, [activeView]);
 
-  // Overscroll bottom-to-landing gesture
+  // Keep Escape as a keyboard route back to Landing.
   useEffect(() => {
     if (!isTechInteractive) return;
-
-    const el = scrollRef.current;
-    if (!el) return;
-
-    const atBottom = () => el.scrollTop + el.clientHeight >= el.scrollHeight - 2;
-
-    const pushDelta = (dy: number, threshold: number) => {
-      if (modalState.project || resumeOpen) return;
-      if (atBottom() && dy > 0) {
-        accRef.current += dy;
-        setPullProgress(calculatePullProgress(accRef.current, threshold));
-        if (accRef.current > threshold) {
-          accRef.current = 0;
-          setPullProgress(0);
-          onReturnLanding();
-        }
-      } else if (accRef.current !== 0) {
-        accRef.current = 0;
-        setPullProgress(0);
-      }
-    };
-
-    const onWheel = (ev: WheelEvent) => {
-      pushDelta(ev.deltaY, SPLIT_CONFIG.techReturnThreshold);
-    };
-
-    const onTouchStart = (ev: TouchEvent) => {
-      touchYRef.current = ev.touches[0]?.clientY ?? 0;
-      accRef.current = 0;
-      setPullProgress(0);
-    };
-
-    const onTouchMove = (ev: TouchEvent) => {
-      const y = ev.touches[0]?.clientY ?? touchYRef.current;
-      pushDelta(touchYRef.current - y, 110);
-      touchYRef.current = y;
-    };
-
     const onKeyDown = (ev: KeyboardEvent) => {
-      if (ev.key === 'Escape' && !modalState.project && !resumeOpen) {
-        onReturnLanding();
-      }
+      if (ev.key === 'Escape' && !resumeOpen) onReturnLanding();
     };
 
-    el.addEventListener('wheel', onWheel, { passive: true });
-    el.addEventListener('touchstart', onTouchStart, { passive: true });
-    el.addEventListener('touchmove', onTouchMove, { passive: true });
     window.addEventListener('keydown', onKeyDown);
 
     return () => {
-      el.removeEventListener('wheel', onWheel);
-      el.removeEventListener('touchstart', onTouchStart);
-      el.removeEventListener('touchmove', onTouchMove);
       window.removeEventListener('keydown', onKeyDown);
     };
-  }, [isTechInteractive, onReturnLanding, modalState.project, resumeOpen]);
+  }, [isTechInteractive, onReturnLanding, resumeOpen]);
 
   const scrollToSection = (sectionId: string) => {
     const container = scrollRef.current;
@@ -120,9 +65,45 @@ export const TechnicalView: React.FC<TechnicalViewProps> = ({
     }
   };
 
-  const handleOpenModal = (project: ProjectItem, initialTab: ProjectModalTab) => {
-    setModalState({ project, tab: initialTab });
-  };
+  // Scrub the About lines against the Technical view's own scroll position.
+  useEffect(() => {
+    const container = scrollRef.current;
+    const detail = detailRef.current;
+    if (!container || !detail) return;
+
+    const lines = Array.from(detail.querySelectorAll<HTMLElement>('[data-scroll-reveal]'));
+    let frame = 0;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const update = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const bounds = container.getBoundingClientRect();
+        lines.forEach((line) => {
+          if (reducedMotion.matches) {
+            line.style.setProperty('--line-reveal', '1');
+            return;
+          }
+          const progress = (bounds.bottom * 0.88 - line.getBoundingClientRect().top) / (bounds.height * 0.4);
+          line.style.setProperty('--line-reveal', String(Math.max(0.18, Math.min(1, progress))));
+        });
+      });
+    };
+    container.addEventListener('scroll', update, { passive: true });
+    reducedMotion.addEventListener('change', update);
+    update();
+    return () => {
+      cancelAnimationFrame(frame);
+      container.removeEventListener('scroll', update);
+      reducedMotion.removeEventListener('change', update);
+    };
+  }, []);
+
+  const aboutLines = [
+    'M.Sc. Computer Science graduate.',
+    'Building practical, database-backed applications in Java and Python.',
+    'Using AI-assisted development tools in my workflow.',
+    'Seeking a Software Development Engineer I role.',
+  ];
 
   return (
     <div
@@ -146,52 +127,41 @@ export const TechnicalView: React.FC<TechnicalViewProps> = ({
       <div className="tech-wrap">
         {/* Portfolio Hero — Clean Full-Width Developer Identity */}
         <section aria-label="Developer introduction">
-          <div className="tech-card flex flex-col justify-between gap-6 sm:p-8 lg:p-10">
+          <div className="tech-card tech-profile-card">
             <div>
               <div className="font-mono-tech text-[11.5px] font-medium text-[#4b4f55] flex items-center gap-2 whitespace-nowrap">
-                <span className="font-bold text-[#111111]">Software Developer</span>
-                <span aria-hidden="true">·</span>
                 <span>{profile.location}</span>
+                <span aria-hidden="true">·</span>
+                <span>PROFILE 01</span>
               </div>
 
               <h1 className="tech-h1">
                 {profile.firstName}{' '}
                 <span>{profile.lastName}</span>
               </h1>
-
-              <p className="text-[16px] sm:text-[18px] leading-[1.58] text-[#22252a] max-w-[64ch] m-0">
-                {profile.techBio}
-              </p>
+              <p className="tech-profile-role">{profile.techRole}</p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 pt-2">
+            <div className="flex flex-wrap items-center gap-3">
               <button
                 type="button"
                 onClick={() => scrollToSection('tech-projects')}
-                className="inline-flex items-center gap-2 font-mono-tech text-[12px] font-bold uppercase px-4 py-2.5 border border-[#111111] bg-[#ffc400] text-[#111111] shadow-[3px_3px_0_#111111] cursor-pointer hover:-translate-x-px hover:-translate-y-px transition-transform whitespace-nowrap shrink-0"
+                className="inline-flex items-center gap-2 font-mono-tech text-[13px] font-bold uppercase px-4 py-2.5 border border-[#111111] bg-[#ffc400] text-[#111111] shadow-[3px_3px_0_#111111] cursor-pointer hover:-translate-x-px hover:-translate-y-px transition-transform whitespace-nowrap shrink-0"
               >
-                <span>Selected Projects</span>
+                <span>Explore my work</span>
                 <ArrowDown className="w-3.5 h-3.5" aria-hidden="true" />
               </button>
-
-              <a
-                href={profile.githubUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 font-mono-tech text-[12px] font-bold uppercase px-4 py-2.5 border border-[#111111] bg-white text-[#111111] shadow-[3px_3px_0_#111111] hover:bg-[#f4f4f1] hover:-translate-x-px hover:-translate-y-px transition-all whitespace-nowrap shrink-0"
-              >
-                <span>GitHub</span>
-                <ArrowUpRight className="w-3.5 h-3.5" aria-hidden="true" />
-              </a>
-
-              <button
-                type="button"
-                onClick={() => scrollToSection('tech-contact')}
-                className="font-mono-tech text-[12px] font-bold uppercase text-[#111111] underline underline-offset-4 hover:text-[#0f5c3f] px-2 py-2 cursor-pointer whitespace-nowrap shrink-0"
-              >
-                Contact
-              </button>
             </div>
+          </div>
+        </section>
+
+        <section className="tech-about-card" aria-labelledby="tech-about-title" ref={detailRef}>
+          <div className="tech-lab"><span className="tech-lab-mark bg-[#ffc400]" />ABOUT ME</div>
+          <h2 id="tech-about-title" className="tech-h2">What I do<span aria-hidden="true">.</span></h2>
+          <div className="tech-about-lines">
+            {aboutLines.map((line, index) => (
+              <p key={`${index}-${line}`} data-scroll-reveal>{line}</p>
+            ))}
           </div>
         </section>
 
@@ -203,7 +173,6 @@ export const TechnicalView: React.FC<TechnicalViewProps> = ({
           projects={projects}
           scrollContainerRef={scrollRef}
           isActive={isTechInteractive}
-          onOpenModal={handleOpenModal}
           onOpenProject={onOpenProject}
         />
 
@@ -211,34 +180,15 @@ export const TechnicalView: React.FC<TechnicalViewProps> = ({
         <ProjectContactFooter
           fullName={profile.fullName}
           location={profile.location}
+          contactEmail={profile.contactEmail}
           githubUrl={profile.githubUrl}
           linkedinUrl={profile.linkedinUrl}
           onOpenResume={() => setResumeOpen(true)}
           onOpenAdmin={onOpenAdmin}
         />
 
-        {/* Overscroll return cue */}
-        <div className="flex flex-col items-center gap-2 pt-2">
-          <p className="font-mono-tech text-[11px] uppercase tracking-[0.14em] text-[#4b4f55] text-center m-0">
-            Keep scrolling ↓ to return to landing
-          </p>
-          <div
-            className="w-36 h-1 bg-[#111111]/15 overflow-hidden"
-            aria-hidden="true"
-          >
-            <div
-              className="h-full bg-[#111111] transition-[width] duration-75"
-              style={{ width: `${Math.round(pullProgress * 100)}%` }}
-            />
-          </div>
-        </div>
       </div>
 
-      <ProjectModal
-        project={modalState.project}
-        initialTab={modalState.tab}
-        onClose={() => setModalState((prev) => ({ ...prev, project: null }))}
-      />
       <ResumeModal isOpen={resumeOpen} onClose={() => setResumeOpen(false)} />
     </div>
   );

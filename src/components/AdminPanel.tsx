@@ -32,6 +32,7 @@ import {
   type CreativeWorkItem,
   type ProjectItem,
 } from '../data/portfolio';
+import { normalizeCreativeCategory } from '../data/gallery';
 import {
   usePortfolioData,
   type AdminRecord,
@@ -105,7 +106,7 @@ function mapWorkDoc(id: string, d: Record<string, unknown>): ManagedCreativeWork
     index: String(d.index ?? '01'),
     title: String(d.title ?? ''),
     handle: String(d.handle ?? ''),
-    category: (d.category as CreativeWorkItem['category']) ?? 'Direction',
+    category: normalizeCreativeCategory(String(d.category ?? ''), id),
     subtitle: String(d.subtitle ?? ''),
     shortDescription: String(d.shortDescription ?? ''),
     masonrySize: (d.masonrySize as CreativeWorkItem['masonrySize']) ?? 'medium',
@@ -114,8 +115,13 @@ function mapWorkDoc(id: string, d: Record<string, unknown>): ManagedCreativeWork
     year: String(d.year ?? '2025–2026'),
     brief: String(d.brief ?? ''),
     promptApproach: String(d.promptApproach ?? ''),
+    promptText: String(d.promptText ?? ''),
     palette: Array.isArray(d.palette) ? d.palette.map(String) : ['#1d4ed8', '#60a5fa', '#ffffff'],
     featureImage: typeof d.featureImage === 'string' ? d.featureImage : '',
+    featureVideo: typeof d.featureVideo === 'string' ? d.featureVideo : undefined,
+    categoryCover: d.categoryCover === true,
+    mediaWidth: typeof d.mediaWidth === 'number' ? d.mediaWidth : undefined,
+    mediaHeight: typeof d.mediaHeight === 'number' ? d.mediaHeight : undefined,
     published: Boolean(d.published),
     sortOrder: typeof d.sortOrder === 'number' ? d.sortOrder : 100,
     updatedBy: typeof d.updatedBy === 'string' ? d.updatedBy : undefined,
@@ -235,7 +241,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ activeView, onNavigateVi
               const data = d.data();
               const statusVal =
                 data.status === 'reviewed' || data.status === 'archived' ? data.status : 'new';
-              const sourceVal = data.source === 'creative' ? 'creative' : 'technical';
+              const sourceVal: ProjectInquiryRecord['source'] =
+                data.source === 'creative' ? 'creative' : 'technical';
               return {
                 id: d.id,
                 name: String(data.name ?? ''),
@@ -412,8 +419,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ activeView, onNavigateVi
         });
       }
 
-      if (adminWorks.length === 0) {
-        CREATIVE_WORKS.forEach((w, idx) => {
+      const existingWorkIds = new Set(adminWorks.map((work) => work.id));
+      const missingWorks = CREATIVE_WORKS.filter((work) => !existingWorkIds.has(work.id));
+      if (missingWorks.length) {
+        missingWorks.forEach((w, idx) => {
           batch.set(doc(db, 'creative_works', w.id), {
             index: w.index,
             title: w.title,
@@ -427,10 +436,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ activeView, onNavigateVi
             year: w.year,
             brief: w.brief,
             promptApproach: w.promptApproach,
+            promptText: w.promptText ?? '',
             palette: w.palette,
             featureImage: w.featureImage ?? '',
+            featureVideo: w.featureVideo ?? '',
+            ...(w.mediaWidth && w.mediaHeight
+              ? { mediaWidth: w.mediaWidth, mediaHeight: w.mediaHeight }
+              : {}),
             published: true,
-            sortOrder: idx + 1,
+            sortOrder: (adminWorks.length + idx + 1),
             updatedBy: user.uid,
             createdAt: now,
             updatedAt: now,
@@ -443,7 +457,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ activeView, onNavigateVi
         action: 'seed',
         resourceType: 'site_config',
         resourceId: 'profile',
-        summary: 'Initialized live Firestore database with baseline portfolio records',
+        summary: `Initialized live Firestore data; added ${missingWorks.length} missing creative works`,
       });
       notify('Portfolio data initialized in Cloud Firestore.');
     } catch (error) {
@@ -793,7 +807,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ activeView, onNavigateVi
                                 Manage Technical Projects
                               </div>
                               <div className="text-xs text-slate-500">
-                                Add, edit, or toggle .apk / .jar / .py projects
+                                Add, edit, or publish project listings
                               </div>
                             </div>
                           </div>

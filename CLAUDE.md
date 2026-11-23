@@ -1,36 +1,40 @@
-# CLAUDE.md — Engineering Guidelines & Repository Conventions
+# Contributor guide
 
-This document defines the conventions, guardrails, and verification commands for working in this codebase.
+## Project commands
 
-## 1. Tech Stack & Commands
+- `npm run dev` starts Vite on port 3000.
+- `npm run lint` runs the TypeScript compiler in check-only mode (`tsc --noEmit`).
+- `npm run build` creates the production site in `dist/`.
+- Focused unit tests can be run with `npx --yes tsx --test src/lib/<name>.test.ts`. There is no `npm test` script in `package.json`.
 
-- **Runtime**: React 19, TypeScript, Vite 8, Tailwind CSS v4 (`@tailwindcss/vite`).
-- **Dev server**: `npm run dev` (serves on `http://localhost:3000`; HMR is intentionally disabled in AI Studio).
-- **Type check**: `npm run lint` (`tsc --noEmit`).
-- **Production build**: `npm run build` (`vite build`).
-- **Unit tests**: `npx --yes tsx --test src/lib/splitPhysics.test.ts`.
+The app uses React 19, TypeScript, Vite 8, Tailwind CSS 4, Firebase Auth/Firestore, Motion, and Lucide React.
 
-## 2. Core Conventions
+## Code organization
 
-1. **Preserve Dual-World Aesthetic Boundaries**:
-   - `#tech` strictly uses ruled paper (`#f4f4f1`), `1px solid #111111` borders, hard offset drop shadows, and `#ffc400` / `#0f5c3f` / `#c81e1e` accents.
-   - `#cre` strictly uses dark nocturnal surfaces (`#050608`), ambient radial gradients, `.ribbed-glass` optical overlays, and light-weight (`300`) `Inter Tight` + italic `Instrument Serif`.
-   - Never bleed brutalist borders into `#cre` or glassmorphism into `#tech`.
-2. **Keep Logic Decoupled**:
-   - Put pure math, gesture thresholds, filtering, and URL parsing inside `src/lib/` with matching `*.test.ts` coverage.
-   - Keep all portfolio copy and project metadata centralized in `src/data/portfolio.ts`.
-3. **Never Re-render on Pointer Move**:
-   - Split divider dragging (`--p`) and cursor-tracked process previews (`--mx`, `--my`) must update CSS custom properties directly via DOM refs rather than React `useState`.
-4. **Accessibility & Keyboard Parity**:
-   - Every view transition must preserve `inert` on hidden layers.
-   - Modals must trap/handle `Escape` without triggering the view-level `Escape`-to-landing shortcut.
-   - All interactive controls must be native `<button>` or `<a href>` elements with explicit labels.
-5. **Zero Dead Links or Placeholder `TODO`s**:
-   - Every action button must perform a real function (open modal, copy email, open external profile, or print resume).
+- Keep portfolio profile, technical projects, skills, creative work, process, and toolkit content in `src/data/portfolio.ts` unless it has a dedicated data module.
+- Keep pure calculations, data normalization, routing, and validation helpers in `src/lib/`; add or update a nearby `*.test.ts` when changing tested pure logic.
+- `src/context/PortfolioDataContext.tsx` owns live profile/project/work data and auth-role state. `src/App.tsx` owns view and project routing.
+- Keep admin feature UI in `src/components/admin/` and shared admin loading, subscriptions, and navigation in `src/components/AdminPanel.tsx`.
 
-## 3. Verification Checklist Before Committing
+## UI and interaction conventions
 
-- [ ] `npx --yes tsx --test src/lib/splitPhysics.test.ts` passes cleanly.
-- [ ] `npm run lint` reports zero TypeScript errors.
-- [ ] `npm run build` succeeds cleanly.
-- [ ] Desktop (`1440×900`) and Mobile (`390×844`) layouts verified with zero horizontal overflow or clipped typography.
+- Preserve the deliberate distinction between the ruled-paper Technical view, the light-grid/dark-panel Creative view, the charcoal media Gallery, and the utilitarian Admin dashboard.
+- Avoid React state updates on every pointer move for high-frequency visuals; use refs and CSS custom properties where the existing interaction pattern does so.
+- Keep views keyboard reachable and use native buttons/links with accessible names. Inactive top-level layers use `inert`.
+- Respect reduced-motion preferences for animated effects and input-driven movement.
+- Technical and Creative views scroll independently; do not use edge overscroll to navigate between views. Keep Landing/persona changes on explicit navigation controls, with Escape as the keyboard return shortcut.
+- In Technical Selected Projects, preserve the existing `ProjectItem` source and case-study route. Keep desktop hover-only previews and the pointer badge scoped to that section; do not add a separate case-study button or always-visible preview cards to rows.
+- Don't add public actions that lead to dead links or inert controls. Development-only missing-media placeholders are intentional fallback behavior.
+
+## Data and security boundaries
+
+- Treat `firestore.rules` as the server-side access control. Keep any corresponding client-side validation in `src/lib/adminValidation.ts` aligned, but do not rely on client validation for security.
+- Never add a client-side service-account credential or secret. The browser Firebase config is public configuration; Firebase rules and project settings provide access control.
+- The three bootstrap administrator emails are duplicated between the client check and Firestore rules. When changing them, update both files and their tests together.
+- Keep profile contact email use consistent across profile data and forms.
+- Creative image uploads accept JPEG, PNG, WebP, or GIF up to 10 MB before compression; image data is compressed in the browser and written to Firestore within the rule-enforced field limit. Video assets are currently referenced by URL/path; this repo does not configure Cloud Storage.
+- Firebase Authentication authorized domains and Google provider configuration live in Firebase project settings; they are not changed by the Firestore rules deployment.
+
+## Before proposing a release
+
+Run `npm run lint` and `npm run build` when verification is requested or needed for the change. Run relevant focused tests for changed helper logic. If the change affects Firestore access, review the rule tests and ensure the deployed rules correspond to `firestore.rules`. Check the responsive layouts and reduced-motion behavior for UI changes.

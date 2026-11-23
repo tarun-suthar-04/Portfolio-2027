@@ -30,6 +30,7 @@ import {
   type CreativeWorkItem,
   type ProjectItem,
 } from '../data/portfolio';
+import { normalizeCreativeCategory } from '../data/gallery';
 import {
   isBootstrapAdminEmail,
   type AdminRole,
@@ -276,7 +277,7 @@ export function PortfolioDataProvider({ children }: { children: ReactNode }) {
             index: String(d.index ?? '01'),
             title: String(d.title ?? ''),
             handle: String(d.handle ?? ''),
-            category: (d.category as CreativeWorkItem['category']) ?? 'Direction',
+            category: normalizeCreativeCategory(String(d.category ?? ''), docSnap.id),
             subtitle: String(d.subtitle ?? ''),
             shortDescription: String(d.shortDescription ?? ''),
             masonrySize: (d.masonrySize as CreativeWorkItem['masonrySize']) ?? 'medium',
@@ -285,8 +286,13 @@ export function PortfolioDataProvider({ children }: { children: ReactNode }) {
             year: String(d.year ?? '2025–2026'),
             brief: String(d.brief ?? ''),
             promptApproach: String(d.promptApproach ?? ''),
+            promptText: String(d.promptText ?? ''),
             palette: Array.isArray(d.palette) ? d.palette.map(String) : ['#1d4ed8', '#60a5fa', '#ffffff'],
             featureImage: typeof d.featureImage === 'string' && d.featureImage.trim() ? d.featureImage : undefined,
+            featureVideo: typeof d.featureVideo === 'string' && d.featureVideo.trim() ? d.featureVideo : undefined,
+            categoryCover: d.categoryCover === true,
+            mediaWidth: typeof d.mediaWidth === 'number' ? d.mediaWidth : undefined,
+            mediaHeight: typeof d.mediaHeight === 'number' ? d.mediaHeight : undefined,
             published: Boolean(d.published),
             sortOrder: typeof d.sortOrder === 'number' ? d.sortOrder : 100,
             updatedBy: typeof d.updatedBy === 'string' ? d.updatedBy : undefined,
@@ -444,7 +450,11 @@ export function PortfolioDataProvider({ children }: { children: ReactNode }) {
   );
 
   const creativeWorks = useMemo<CreativeWorkItem[]>(
-    () => (remoteWorks && remoteWorks.length > 0 ? remoteWorks : CREATIVE_WORKS),
+    () => {
+      if (!remoteWorks?.length) return CREATIVE_WORKS;
+      const remoteIds = new Set(remoteWorks.map((work) => work.id));
+      return [...remoteWorks, ...CREATIVE_WORKS.filter((work) => !remoteIds.has(work.id))];
+    },
     [remoteWorks]
   );
 

@@ -11,7 +11,6 @@ import {
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import {
-  CONTACT_DIRECT_EMAIL,
   CONTACT_REASON_OPTIONS,
   DEFAULT_CONTACT_REASON,
   validateContactInquiry,
@@ -23,6 +22,7 @@ import {
 interface ProjectContactFooterProps {
   fullName: string;
   location: string;
+  contactEmail: string;
   githubUrl: string;
   linkedinUrl: string;
   onOpenResume: () => void;
@@ -32,6 +32,7 @@ interface ProjectContactFooterProps {
 export const ProjectContactFooter: React.FC<ProjectContactFooterProps> = ({
   fullName,
   location,
+  contactEmail,
   githubUrl,
   linkedinUrl,
   onOpenResume,
@@ -120,10 +121,10 @@ export const ProjectContactFooter: React.FC<ProjectContactFooterProps> = ({
             <p className="mt-6 mb-0 text-[15px] sm:text-[16px] leading-[1.6] text-white/75">
               Or just write:{' '}
               <a
-                href={`mailto:${CONTACT_DIRECT_EMAIL}`}
+                href={`mailto:${contactEmail}`}
                 className="font-mono-tech text-[14px] sm:text-[15px] text-white underline decoration-[#ffc400] decoration-2 underline-offset-4 hover:text-[#ffc400] transition-colors break-all"
               >
-                {CONTACT_DIRECT_EMAIL}
+                {contactEmail}
               </a>
             </p>
           </div>

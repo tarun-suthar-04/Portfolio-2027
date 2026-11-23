@@ -1,23 +1,26 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AdminPanel } from './components/AdminPanel';
 import { CreativeView } from './components/CreativeView';
+import { GalleryView } from './components/GalleryView';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { LandingSplit } from './components/LandingSplit';
 import { ProjectDetailPage } from './components/ProjectDetailPage';
 import { TechnicalView } from './components/TechnicalView';
 import { PortfolioDataProvider, usePortfolioData } from './context/PortfolioDataContext';
 import type { ProjectItem } from './data/portfolio';
+import type { CreativeCategory } from './data/portfolio';
 import { buildProjectHash, parseProjectIdFromHash } from './lib/projectCaseStudy';
 import { parseViewFromLocation, ViewMode, viewToHash } from './lib/splitPhysics';
 
 function AppShell() {
-  const { projects } = usePortfolioData();
+  const { projects, creativeWorks } = usePortfolioData();
   const [activeView, setActiveView] = useState<ViewMode>(() =>
     parseViewFromLocation(window.location.hash, window.location.search)
   );
   const [activeProjectId, setActiveProjectId] = useState<string | null>(() =>
     parseProjectIdFromHash(window.location.hash)
   );
+  const [galleryCategory, setGalleryCategory] = useState<CreativeCategory | null>(null);
 
   const activeProject =
     activeView === 'tech' && activeProjectId
@@ -94,6 +97,11 @@ function AppShell() {
     setActiveView('tech');
   }, []);
 
+  const openGallery = useCallback((category: CreativeCategory | null = null) => {
+    setGalleryCategory(category);
+    setActiveView('gallery');
+  }, []);
+
   return (
     <>
       <LandingSplit activeView={activeView} onOpenView={navigateTo} />
@@ -117,6 +125,15 @@ function AppShell() {
         onReturnLanding={() => navigateTo('land')}
         onSwitchTechnical={() => navigateTo('tech')}
         onOpenAdmin={() => navigateTo('admin')}
+        onOpenGallery={openGallery}
+      />
+      <GalleryView
+        activeView={activeView}
+        works={creativeWorks}
+        initialCategory={galleryCategory}
+        onBack={() => navigateTo('cre')}
+        onNavigateLanding={() => navigateTo('land')}
+        onNavigateTechnical={() => navigateTo('tech')}
       />
       <AdminPanel activeView={activeView} onNavigateView={navigateTo} />
     </>
